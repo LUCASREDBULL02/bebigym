@@ -9,50 +9,41 @@ export default function ProgramRunner({
   onNextDay,
   logs,
 }) {
-  const activeProgram = programs.find((p) => p.id === activeProgramId) || programs[0];
+  const activeProgram =
+    programs.find((p) => p.id === activeProgramId) || programs[0];
+  const day = activeProgram?.days?.[dayIndex] || [];
   const today = new Date().toISOString().slice(0, 10);
-
-  // Get today’s day block
-  const dayBlock = activeProgram?.days?.[dayIndex] || null;
-
-  // Normalize exercises to a uniform shape:
-  // ["bench", "row"] → [{ exerciseId:"bench", sets:3, reps:8 }, ...]
-  const exercises =
-    dayBlock?.exercises?.map((ex) => {
-      if (typeof ex === "string") {
-        return { exerciseId: ex, sets: 3, reps: 8 }; // DEFAULT
-      }
-      // If someone uses full object format
-      return {
-        exerciseId: ex.exerciseId,
-        sets: ex.sets || 3,
-        reps: ex.reps || 8,
-      };
-    }) || [];
 
   function countLoggedSets(exId) {
     return logs.filter((l) => l.date === today && l.exerciseId === exId).length;
   }
 
   return (
-    <div className="card">
+    <div className="card" style={{ width: "100%", overflowX: "hidden" }}>
       <h3 style={{ marginTop: 0 }}>Program Runner 📅</h3>
-
-      <p className="small">
-        Välj program och följ dagens pass. Set loggas automatiskt i loggboken.
+      <p className="small" style={{ marginBottom: 8 }}>
+        Välj program, följ dagens pass och logga dina set. När allt är klart
+        kan du gå vidare till nästa dag.
       </p>
 
-      {/* Program selector */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
+          marginBottom: 10,
+        }}
+      >
         <select
           value={activeProgram.id}
           onChange={(e) => onSelectProgram(e.target.value)}
           style={{
             padding: "6px 8px",
-            borderRadius: 8,
-            border: "1px solid rgba(148,163,184,0.7)",
+            borderRadius: 999,
+            border: "1px solid rgba(148,163,184,0.8)",
             background: "rgba(15,23,42,0.9)",
             color: "#e5e7eb",
+            fontSize: 13,
           }}
         >
           {programs.map((p) => (
@@ -63,45 +54,49 @@ export default function ProgramRunner({
         </select>
 
         <div className="small" style={{ alignSelf: "center" }}>
-          Dag {dayIndex + 1} / {activeProgram.days.length}
+          Dag {dayIndex + 1} / {activeProgram.days.length} —{" "}
+          <span style={{ fontWeight: 500 }}>{day?.name}</span>
         </div>
       </div>
 
-      {/* Missing day */}
-      {!dayBlock && <p className="small">Ingen dag definierad.</p>}
+      {!day.length && (
+        <p className="small">Ingen dag definierad för detta program.</p>
+      )}
 
-      {/* List exercises */}
-      {exercises.map((d, i) => {
-        const ex = EXERCISES.find((e) => e.id === d.exerciseId) || { name: d.exerciseId };
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {day.exercises &&
+          day.exercises.map((exId, idx) => {
+            const ex = EXERCISES.find((e) => e.id === exId);
+            const logged = countLoggedSets(exId);
+            const targetSets = 3; // om du vill, kan du senare lägga per-övnings-set
+            const done = logged >= targetSets;
 
-        const logged = countLoggedSets(d.exerciseId);
-        const done = logged >= d.sets;
+            return (
+              <div
+                key={idx}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(148,163,184,0.5)",
+                  background: done
+                    ? "rgba(34,197,94,0.22)"
+                    : "rgba(15,23,42,0.95)",
+                  fontSize: 12,
+                }}
+              >
+                <div style={{ marginBottom: 3 }}>
+                  {ex?.name || exId}
+                </div>
+                <div className="small">
+                  Loggade set idag: {logged}/{targetSets} {done ? "✅" : ""}
+                </div>
+              </div>
+            );
+          })}
+      </div>
 
-        return (
-          <div
-            key={i}
-            style={{
-              padding: "6px 8px",
-              borderRadius: 10,
-              border: "1px solid rgba(148,163,184,0.4)",
-              background: done ? "rgba(34,197,94,0.25)" : "rgba(15,23,42,0.9)",
-              fontSize: 12,
-              marginBottom: 4,
-            }}
-          >
-            <div>
-              {ex.name} — {d.sets} x {d.reps}
-            </div>
-            <div className="small">
-              Loggade set idag: {logged}/{d.sets} {done ? "✅" : ""}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Next day */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-        <button className="btn" onClick={onNextDay}>
+      <div style={{ display: "flex", marginTop: 10 }}>
+        <button className="btn" style={{ flex: 1 }} onClick={onNextDay}>
           Nästa dag ➜
         </button>
       </div>

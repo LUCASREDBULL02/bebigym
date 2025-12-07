@@ -528,12 +528,13 @@ const muscleStats = useMemo(() => {
       {toast && <Toast title={toast.title} subtitle={toast.subtitle} />}
 
       <aside className="sidebar">
-        <div className="sidebar-header">
-  <div>
-    <div className="sidebar-title">Bebi Gym </div>
-    <div className="sidebar-sub">För Maria Kristina 💗</div>
+  <div className="sidebar-header">
+    <BebiAvatar size={52} mood={mood} />
+    <div>
+      <div className="sidebar-title">Bebi Gym v17</div>
+      <div className="sidebar-sub">För Maria Kristina 💗</div>
+    </div>
   </div>
-</div>
 
         <div className="sidebar-nav">
           <button

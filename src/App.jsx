@@ -603,7 +603,6 @@ const muscleStats = useMemo(() => {
           </button>
         </div>
 
-        {view === 'dashboard' && (
       {view === 'dashboard' && (
   <div className="row" style={{ alignItems: 'flex-start' }}>
 

@@ -604,6 +604,16 @@ const muscleStats = useMemo(() => {
         </div>
 
         {view === 'dashboard' && (
+      {view === 'dashboard' && (
+  <div className="row" style={{ alignItems: 'flex-start' }}>
+
+    <div className="col" style={{ flex: 1, gap: 10 }}>
+      
+      <ProfileCard profile={profile} />
+
+      <div className="card small">
+        ...
+
           <div className="row" style={{ alignItems: 'flex-start' }}>
           <ProfileCard profile={profile} setProfile={setProfile} />
             <div className="col" style={{ flex: 1, gap: 10 }}>

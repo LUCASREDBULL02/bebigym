@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Bebi Gym v13.3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head><link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#e11d48">
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body><script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/service-worker.js");
+    });
+  }
+</script>
+</html>

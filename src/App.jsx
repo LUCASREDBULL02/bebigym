@@ -243,13 +243,23 @@ export default function App() {
   const [dayIndex, setDayIndex] = useState(0)
   const [claimedRewards, setClaimedRewards] = useState([])
 
-  const [profile, setProfile] = useState({
-  name: "Maria Kristina",
-  nick: "Bebi",
-  age: 21,
-  height: 170,
-  weight: 68,
-});
+  const [profile, setProfile] = useState(() => {
+  const saved = localStorage.getItem("bebi_profile")
+  return saved
+    ? JSON.parse(saved)
+    : {
+        name: "Maria Kristina",
+        nick: "Bebi",
+        age: 21,
+        height: 170,
+        weight: 68,
+        avatar: "/avatar.png", // fallback
+      }
+})
+
+useEffect(() => {
+  localStorage.setItem("bebi_profile", JSON.stringify(profile))
+}, [profile])
 
   const { mood, bumpMood } = useBebiMood()
 
@@ -529,9 +539,8 @@ const muscleStats = useMemo(() => {
 
       <aside className="sidebar">
   <div className="sidebar-header">
-    <BebiAvatar size={52} mood={mood} />
     <div>
-      <div className="sidebar-title">Bebi Gym v17</div>
+      <div className="sidebar-title">Bebi Gym </div>
       <div className="sidebar-sub">För Maria Kristina 💗</div>
     </div>
   </div>

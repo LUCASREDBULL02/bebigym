@@ -1,325 +1,174 @@
+// src/components/ProfileView.jsx
 import React, { useState } from "react";
-import BebiAvatar from "./BebiAvatar.jsx";
 import BodyMeasurementChart from "./BodyMeasurementChart.jsx";
 
-const MEASUREMENT_FIELDS = [
-<div className="card" style={{ marginTop: 15 }}>
-  <h3 style={{ marginTop: 0 }}>Kroppsmått 📏</h3>
+export default function ProfileView({ profile, setProfile, bodyStats, onAddMeasurement, onDeleteMeasurement }) {
+  const [edit, setEdit] = useState({
+    name: profile.name,
+    nick: profile.nick,
+    age: profile.age,
+    height: profile.height,
+    weight: profile.weight,
+  });
 
-  {[
-    ["waist", "Midja"],
-    ["hips", "Höfter"],
-    ["thigh", "Lår"],
-    ["glutes", "Rumpa"],
-    ["chest", "Bröst"],
-    ["arm", "Arm"],
-  ].map(([key, label]) => (
-    <div key={key} style={{ marginBottom: 22 }}>
-      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
-        {label}
-      </div>
-
-      {/* LISTA */}
-      <ul style={{ paddingLeft: 0, listStyle: "none", marginTop: 6 }}>
-        {bodyStats[key]?.map((m) => (
-          <li
-            key={m.id}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 4,
-              padding: "4px 6px",
-              borderRadius: 8,
-              background: "rgba(15,23,42,0.9)",
-              border: "1px solid rgba(148,163,184,0.5)",
-              fontSize: 12,
-            }}
-          >
-            <div>
-              {m.date} — {m.value} cm
-            </div>
-            <button
-              className="btn"
-              style={{ fontSize: 11, padding: "3px 7px" }}
-              onClick={() => {
-                if (window.confirm(`Ta bort detta ${label.toLowerCase()}-mått?`)) {
-                  onDeleteMeasurement(key, m.id);
-                }
-              }}
-            >
-              🗑️
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      {/* GRAF */}
-      <BodyMeasurementChart label={label} dataPoints={bodyStats[key]} />
-
-      {/* Lägg till mått */}
-      <button
-        className="btn-pink"
-        style={{ marginTop: 6, fontSize: 12 }}
-        onClick={() => {
-          const value = prompt(`Ange nytt mått för ${label} (cm)`);
-          if (!value) return;
-          const date = new Date().toISOString().slice(0, 10);
-
-          onAddMeasurement(key, {
-            id: crypto.randomUUID(),
-            value,
-            date,
-          });
-        }}
-      >
-        + Lägg till {label}
-      </button>
-    </div>
-  ))}
-</div>
-
-<BodyMeasurementChart
-  label={label}
-  dataPoints={bodyStats[key]}
-/>
-export default function ProfileView({
-  profile,
-  setProfile,
-  bodyStats,
-  onAddMeasurement,
-}) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState(profile);
-
-  const [mField, setMField] = useState("waist");
-  const [mValue, setMValue] = useState("");
-  const [mDate, setMDate] = useState(new Date().toISOString().slice(0, 10));
-
-  function handleSaveProfile() {
-    setProfile(form);
-    setEditing(false);
-  }
-
-  function handleAddMeasurement() {
-    if (!mValue) return;
-    onAddMeasurement(mField, {
-      date: mDate,
-      value: Number(mValue),
-    });
-    setMValue("");
-  }
-
-  function latestMeasurement(key) {
-    const arr = bodyStats?.[key] || [];
-    if (!arr.length) return null;
-    const sorted = [...arr].sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
-    );
-    return sorted[0];
+  function handleSave() {
+    setProfile(edit);
   }
 
   return (
-    <div className="card">
+    <div className="card" style={{ padding: 20 }}>
       <h2 style={{ marginTop: 0, marginBottom: 10 }}>Profil 💗</h2>
 
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          alignItems: "center",
-          marginBottom: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <BebiAvatar size={70} />
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>
-            {profile.name}{" "}
-            <span style={{ fontSize: 14, opacity: 0.8 }}>
-              ({profile.nick})
-            </span>
-          </div>
-          <div className="small">
-            {profile.height} cm • {profile.weight} kg • {profile.age} år
-          </div>
-          {!editing && (
-            <button
-              className="btn"
-              style={{ marginTop: 6, fontSize: 11, padding: "4px 8px" }}
-              onClick={() => setEditing(true)}
-            >
-              ✏️ Redigera profil
-            </button>
-          )}
+      {/* PROFILE FIELDS */}
+      <div className="row" style={{ gap: 10 }}>
+        <div className="col" style={{ flex: 1 }}>
+          <label className="small">Namn</label>
+          <input
+            className="input"
+            value={edit.name}
+            onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+          />
+        </div>
+        <div className="col" style={{ flex: 1 }}>
+          <label className="small">Nick</label>
+          <input
+            className="input"
+            value={edit.nick}
+            onChange={(e) => setEdit({ ...edit, nick: e.target.value })}
+          />
         </div>
       </div>
 
-      {editing && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-            gap: 8,
-            marginBottom: 10,
-          }}
-        >
-          <div>
-            <label className="small">Namn</label>
-            <input
-              className="input"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="small">Smeknamn</label>
-            <input
-              className="input"
-              value={form.nick}
-              onChange={(e) => setForm({ ...form, nick: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="small">Ålder</label>
-            <input
-              className="input"
-              type="number"
-              value={form.age}
-              onChange={(e) =>
-                setForm({ ...form, age: Number(e.target.value) })
-              }
-            />
-          </div>
-          <div>
-            <label className="small">Längd (cm)</label>
-            <input
-              className="input"
-              type="number"
-              value={form.height}
-              onChange={(e) =>
-                setForm({ ...form, height: Number(e.target.value) })
-              }
-            />
-          </div>
-          <div>
-            <label className="small">Vikt (kg)</label>
-            <input
-              className="input"
-              type="number"
-              value={form.weight}
-              onChange={(e) =>
-                setForm({ ...form, weight: Number(e.target.value) })
-              }
-            />
-          </div>
+      <div className="row" style={{ gap: 10, marginTop: 10 }}>
+        <div className="col" style={{ flex: 1 }}>
+          <label className="small">Ålder</label>
+          <input
+            type="number"
+            className="input"
+            value={edit.age}
+            onChange={(e) => setEdit({ ...edit, age: Number(e.target.value) })}
+          />
+        </div>
+        <div className="col" style={{ flex: 1 }}>
+          <label className="small">Längd (cm)</label>
+          <input
+            type="number"
+            className="input"
+            value={edit.height}
+            onChange={(e) =>
+              setEdit({ ...edit, height: Number(e.target.value) })
+            }
+          />
+        </div>
+        <div className="col" style={{ flex: 1 }}>
+          <label className="small">Vikt (kg)</label>
+          <input
+            type="number"
+            className="input"
+            value={edit.weight}
+            onChange={(e) =>
+              setEdit({ ...edit, weight: Number(e.target.value) })
+            }
+          />
+        </div>
+      </div>
 
-          <div
-            style={{
-              gridColumn: "1 / -1",
-              display: "flex",
-              gap: 8,
-              marginTop: 6,
-            }}
-          >
-            <button className="btn-pink" onClick={handleSaveProfile}>
-              💾 Spara
-            </button>
+      <button className="btn-pink" style={{ marginTop: 15 }} onClick={handleSave}>
+        Spara profil
+      </button>
+
+      {/* BODY MEASUREMENTS */}
+      <div className="divider" style={{ margin: "20px 0" }} />
+
+      <h2 style={{ marginTop: 0 }}>Kroppsmått 📏</h2>
+
+      {[
+        ["waist", "Midja"],
+        ["hips", "Höfter"],
+        ["thigh", "Lår"],
+        ["glutes", "Rumpa"],
+        ["chest", "Bröst"],
+        ["arm", "Arm"],
+      ].map(([key, label]) => {
+        const list = bodyStats[key] || [];
+
+        return (
+          <div key={key} style={{ marginBottom: 25 }}>
+            <div
+              style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}
+            >
+              {label}
+            </div>
+
+            {/* LISTA */}
+            <ul style={{ paddingLeft: 0, listStyle: "none", marginTop: 6 }}>
+              {list.length === 0 && (
+                <div className="small" style={{ opacity: 0.6 }}>
+                  Inga registrerade mått än
+                </div>
+              )}
+
+              {list.map((m) => (
+                <li
+                  key={m.id}
+                  style={{
+                    fontSize: 12,
+                    marginBottom: 4,
+                    padding: "4px 6px",
+                    borderRadius: 8,
+                    background: "rgba(15,23,42,0.9)",
+                    border: "1px solid rgba(148,163,184,0.5)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>
+                    {m.date} — {m.value} cm
+                  </div>
+
+                  <button
+                    className="btn"
+                    style={{ fontSize: 11, padding: "3px 7px" }}
+                    onClick={() => {
+                      if (window.confirm(`Ta bort detta ${label}-mått?`)) {
+                        onDeleteMeasurement(key, m.id);
+                      }
+                    }}
+                  >
+                    🗑️
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {/* GRAF */}
+            <div style={{ marginTop: 10 }}>
+              <BodyMeasurementChart label={label} dataPoints={list} />
+            </div>
+
+            {/* ADD BUTTON */}
             <button
-              className="btn"
+              className="btn-pink"
+              style={{ marginTop: 6, fontSize: 12 }}
               onClick={() => {
-                setForm(profile);
-                setEditing(false);
+                const value = prompt(`Ange nytt mått för ${label} (cm)`);
+                if (!value) return;
+
+                const date = new Date().toISOString().slice(0, 10);
+
+                onAddMeasurement(key, {
+                  id: crypto.randomUUID(),
+                  value: Number(value),
+                  date,
+                });
               }}
             >
-              Avbryt
+              + Lägg till {label}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Kroppsmått */}
-      <div
-        style={{
-          marginTop: 10,
-          paddingTop: 10,
-          borderTop: "1px solid rgba(148,163,184,0.3)",
-        }}
-      >
-        <h3 style={{ margin: 0, marginBottom: 8, fontSize: 14 }}>
-          Kroppsmått 📏
-        </h3>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr auto",
-            gap: 6,
-            alignItems: "center",
-          }}
-        >
-          <select
-            className="input"
-            value={mField}
-            onChange={(e) => setMField(e.target.value)}
-          >
-            {MEASUREMENT_FIELDS.map((f) => (
-              <option key={f.key} value={f.key}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-
-          <input
-            className="input"
-            type="number"
-            placeholder="cm"
-            value={mValue}
-            onChange={(e) => setMValue(e.target.value)}
-          />
-
-          <input
-            className="input"
-            type="date"
-            value={mDate}
-            onChange={(e) => setMDate(e.target.value)}
-          />
-
-          <button
-            className="btn-pink"
-            style={{ fontSize: 11, padding: "6px 8px" }}
-            onClick={handleAddMeasurement}
-          >
-            ➕
-          </button>
-        </div>
-
-        <div
-          style={{
-            marginTop: 10,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))",
-            gap: 6,
-          }}
-        >
-          {MEASUREMENT_FIELDS.map((f) => {
-            const last = latestMeasurement(f.key);
-            return (
-              <div key={f.key} className="card small">
-                <div style={{ fontSize: 12, opacity: 0.8 }}>{f.label}</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>
-                  {last ? `${last.value} cm` : "-"}
-                </div>
-                {last && (
-                  <div className="small" style={{ opacity: 0.7 }}>
-                    Senast: {last.date}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 }

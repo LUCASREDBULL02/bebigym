@@ -801,16 +801,26 @@ export default function App() {
         {/* PROFIL */}
         {view === "profile" && (
           <ProfileView
-            profile={profile}
-            setProfile={setProfile}
-            bodyStats={bodyStats}
-            onAddMeasurement={(key, entry) => {
-              setBodyStats((prev) => {
-                const arr = prev[key] || [];
-                return { ...prev, [key]: [...arr, entry] };
-              });
-            }}
-          />
+  profile={profile}
+  setProfile={setProfile}
+  bodyStats={bodyStats}
+  onAddMeasurement={(key, entry) => {
+    setBodyStats((prev) => {
+      const arr = prev[key] || [];
+      return { ...prev, [key]: [...arr, entry] };
+    });
+  }}
+  onDeleteMeasurement={(key, id) => {
+    setBodyStats((prev) => {
+      const arr = prev[key] || [];
+      return {
+        ...prev,
+        [key]: arr.filter((m) => m.id !== id)
+      };
+    });
+  }}
+/>
+
         )}
       </main>
 

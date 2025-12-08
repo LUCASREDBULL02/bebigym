@@ -623,60 +623,60 @@ const muscleStats = useMemo(() => {
           </button>
         </div>
 
-      {view === 'dashboard' && (
+{view === 'dashboard' && (
   <div className="row" style={{ alignItems: 'flex-start' }}>
 
     <div className="col" style={{ flex: 1, gap: 10 }}>
       
-      <ProfileCard profile={profile} />
+      <ProfileCard profile={profile} setProfile={setProfile} />
 
       <div className="card small">
-        ...
-
-          <div className="row" style={{ alignItems: 'flex-start' }}>
-          <ProfileCard profile={profile} setProfile={setProfile} />
-            <div className="col" style={{ flex: 1, gap: 10 }}>
-              <div className="card small">
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>XP & Level</div>
-                    <div className="small">Du får XP för varje tungt set</div>
-                  </div>
-                  <div style={{ textAlign: 'right', fontSize: 12 }}>
-                    <div>{xp} XP</div>
-                    <div>Tier {battleTier}</div>
-                  </div>
-                </div>
-                <div className="progress-wrap" style={{ marginTop: 6 }}>
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${Math.min(100, Math.round((xp / nextTierXp) * 100))}%` }}
-                  />
-                </div>
-                <div className="small" style={{ marginTop: 4 }}>
-                  Nästa tier vid {nextTierXp} XP
-                </div>
-              </div>
-
-              <MuscleMap muscleStats={muscleStats} />
-              <div style={{ marginTop: 10 }}>
-                <MuscleComparison data={comparisonData} />
-              </div>
-            </div>
-
-            <div className="col" style={{ flex: 1, gap: 10 }}>
-              <BossArena bosses={bosses} />
-              <BattlePass
-                tier={battleTier}
-                xp={xp}
-                nextTierXp={nextTierXp}
-                rewards={BATTLE_REWARDS}
-                claimedRewards={claimedRewards}
-                onClaimReward={handleClaimReward}
-              />
-            </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>XP & Level</div>
+            <div className="small">Du får XP för varje tungt set</div>
           </div>
-        )}
+          <div style={{ textAlign: 'right', fontSize: 12 }}>
+            <div>{xp} XP</div>
+            <div>Tier {battleTier}</div>
+          </div>
+        </div>
+
+        <div className="progress-wrap" style={{ marginTop: 6 }}>
+          <div
+            className="progress-fill"
+            style={{ width: `${Math.min(100, Math.round((xp / nextTierXp) * 100))}%` }}
+          />
+        </div>
+
+        <div className="small" style={{ marginTop: 4 }}>
+          Nästa tier vid {nextTierXp} XP
+        </div>
+      </div>
+
+      <MuscleMap muscleStats={muscleStats} />
+
+      <div style={{ marginTop: 10 }}>
+        <MuscleComparison data={comparisonData} />
+      </div>
+
+    </div>
+
+    <div className="col" style={{ flex: 1, gap: 10 }}>
+      <BossArena bosses={bosses} />
+      <BattlePass
+        tier={battleTier}
+        xp={xp}
+        nextTierXp={nextTierXp}
+        rewards={BATTLE_REWARDS}
+        claimedRewards={claimedRewards}
+        onClaimReward={handleClaimReward}
+      />
+    </div>
+
+  </div>
+)}
+
 
         {view === 'log' && (
           <div className="card">

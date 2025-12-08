@@ -10,7 +10,10 @@ const MEASUREMENT_FIELDS = [
   { key: "chest", label: "Bröst (cm)" },
   { key: "arm", label: "Arm (cm)" },
 ];
-
+<BodyMeasurementChart
+  label={label}
+  dataPoints={bodyStats[key]}
+/>
 export default function ProfileView({
   profile,
   setProfile,

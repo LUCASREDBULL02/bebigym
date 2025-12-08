@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export default function ProfileView({ profile, setProfile }) {
   const [temp, setTemp] = useState(profile);
   const [saved, setSaved] = useState(false);
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setTemp(profile);
@@ -10,6 +12,18 @@ export default function ProfileView({ profile, setProfile }) {
 
   function handleChange(field, value) {
     setTemp((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleAvatarUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result;
+      setTemp((prev) => ({ ...prev, avatar: base64 }));
+    };
+    reader.readAsDataURL(file);
   }
 
   function handleSave() {
@@ -28,7 +42,7 @@ export default function ProfileView({ profile, setProfile }) {
         animation: "fadeIn 0.3s ease",
       }}
     >
-      {/* TOP CARD */}
+      {/* AVATAR CARD */}
       <div
         style={{
           background:
@@ -45,13 +59,39 @@ export default function ProfileView({ profile, setProfile }) {
           src={temp.avatar || "/avatar.png"}
           alt="avatar"
           style={{
-            width: 120,
-            height: 120,
+            width: 140,
+            height: 140,
             borderRadius: "50%",
             objectFit: "cover",
-            border: "4px solid rgba(255,255,255,0.08)",
+            border: "4px solid rgba(255,255,255,0.1)",
             marginBottom: 14,
+            boxShadow: "0 4px 15px rgba(0,0,0,0.35)",
           }}
+        />
+
+        <button
+          onClick={() => fileInputRef.current.click()}
+          style={{
+            background: "rgba(236,72,153,0.85)",
+            color: "#fff",
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: "none",
+            cursor: "pointer",
+            fontSize: 14,
+            fontWeight: 600,
+            marginBottom: 8,
+          }}
+        >
+          Byt avatar 📸
+        </button>
+
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleAvatarUpload}
         />
 
         <div style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>
@@ -96,17 +136,60 @@ export default function ProfileView({ profile, setProfile }) {
 
         <div style={{ height: 14 }} />
 
-        <div style={sectionTitle}>Kroppsmått</div>
+        <div style={sectionTitle}>Kroppsmått (cm)</div>
+
+        {/* New body measurements */}
+        <Field
+          label="Bröst"
+          type="number"
+          value={temp.chest || ""}
+          onChange={(v) => handleChange("chest", Number(v))}
+        />
 
         <Field
-          label="Längd (cm)"
+          label="Midja"
+          type="number"
+          value={temp.waist || ""}
+          onChange={(v) => handleChange("waist", Number(v))}
+        />
+
+        <Field
+          label="Höfter"
+          type="number"
+          value={temp.hips || ""}
+          onChange={(v) => handleChange("hips", Number(v))}
+        />
+
+        <Field
+          label="Lår"
+          type="number"
+          value={temp.thigh || ""}
+          onChange={(v) => handleChange("thigh", Number(v))}
+        />
+
+        <Field
+          label="Vad"
+          type="number"
+          value={temp.calf || ""}
+          onChange={(v) => handleChange("calf", Number(v))}
+        />
+
+        <Field
+          label="Armar"
+          type="number"
+          value={temp.arms || ""}
+          onChange={(v) => handleChange("arms", Number(v))}
+        />
+
+        <Field
+          label="Längd"
           type="number"
           value={temp.height}
           onChange={(v) => handleChange("height", Number(v))}
         />
 
         <Field
-          label="Vikt (kg)"
+          label="Vikt"
           type="number"
           value={temp.weight}
           onChange={(v) => handleChange("weight", Number(v))}
@@ -138,7 +221,7 @@ export default function ProfileView({ profile, setProfile }) {
   );
 }
 
-/* Subcomponent for inputs (cleaner code) */
+/* Small reusable input component */
 function Field({ label, value, onChange, type = "text" }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -166,7 +249,6 @@ function Field({ label, value, onChange, type = "text" }) {
           color: "#f1f5f9",
           fontSize: 15,
           outline: "none",
-          transition: "0.2s",
         }}
       />
     </div>

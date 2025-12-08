@@ -515,3 +515,78 @@ body {
     padding-top: 10px;
   }
 }
+/* ===================== */
+/*   HAMBURGER BUTTON    */
+/* ===================== */
+
+.hamburger-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none !important;
+  }
+
+  .hamburger-btn {
+    display: inline-block;
+    font-size: 28px;
+    background: none;
+    border: none;
+    margin-right: 12px;
+    color: #f1f5f9;
+    cursor: pointer;
+  }
+
+  /* Drawer panel */
+  .mobile-drawer {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    width: 260px;
+    height: 100%;
+    background: rgba(15,23,42,0.97);
+    backdrop-filter: blur(8px);
+    padding: 18px;
+    transition: left 0.25s ease-in-out;
+    z-index: 99999;
+  }
+
+  .mobile-drawer.open {
+    left: 0;
+  }
+
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #f8fafc;
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 36px;
+    color: #f1f5f9;
+    cursor: pointer;
+    line-height: 0.7;
+    padding: 0;
+  }
+
+  .drawer-links button {
+    background: none;
+    border: none;
+    font-size: 16px;
+    padding: 12px 0;
+    width: 100%;
+    text-align: left;
+    color: #e2e8f0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .drawer-links button:hover {
+    color: #f472b6;
+  }
+}

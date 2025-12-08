@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import BebiAvatar from './components/BebiAvatar.jsx'
 import ProfileCard from './components/ProfileCard.jsx'
+import ProfileView from "./components/ProfileView.jsx";
 import Toast from './components/Toast.jsx'
 import LogModal from './components/LogModal.jsx'
 import MuscleMap from './components/MuscleMap.jsx'
@@ -588,6 +589,16 @@ const muscleStats = useMemo(() => {
             <span className="icon">🏆</span>
             <span>PR-lista</span>
           </button>
+  <button
+    className={`sidebar-link ${view === 'profile' ? 'active' : ''}`}
+    onClick={() => setView('profile')}
+  >
+    <span className="icon">👤</span>
+    <span>Profil</span>
+  </button>
+
+</div>
+
         </div>
 
         <div style={{ marginTop: 'auto', fontSize: 11, color: '#9ca3af' }}>
@@ -746,6 +757,10 @@ const muscleStats = useMemo(() => {
         {view === 'ach' && <Achievements unlocked={unlockedAchievements} />}
 
         {view === 'pr' && <PRList prMap={prMap} />}
+        {view === "profile" && (
+  <ProfileView profile={profile} setProfile={setProfile} />
+)}
+
       </main>
 
       <LogModal

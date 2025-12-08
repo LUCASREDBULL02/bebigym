@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import BebiAvatar from "./components/BebiAvatar.jsx";
-import ProfileCard from "./components/ProfileCard.jsx";
 import ProfileView from "./components/ProfileView.jsx";
 import Toast from "./components/Toast.jsx";
 import LogModal from "./components/LogModal.jsx";
@@ -11,17 +10,18 @@ import BattlePass from "./components/BattlePass.jsx";
 import ProgramRunner from "./components/ProgramRunner.jsx";
 import PRList from "./components/PRList.jsx";
 import MuscleComparison from "./components/MuscleComparison.jsx";
+import LiftTools from "./components/LiftTools.jsx";
 
 import { buildComparisonChartData } from "./utils/comparisonData.js";
 import { useBebiMood } from "./hooks/useBebiMood.js";
-
 import { EXERCISES } from "./data/exercises";
 import { MUSCLES } from "./data/muscles";
 import { STRENGTH_STANDARDS } from "./data/strengthStandards";
 import { PROGRAMS } from "./data/programs";
 import { initialBosses } from "./data/bosses";
 
-// ---------------- Battle Pass rewards ----------------
+// ------------------ KONSTANTER ------------------
+
 const BATTLE_REWARDS = [
   {
     id: "r_50xp",
@@ -53,7 +53,6 @@ const BATTLE_REWARDS = [
   },
 ];
 
-// ---------------- Helpers ----------------
 function calc1RM(weight, reps) {
   if (!weight || !reps) return 0;
   return Math.round(weight * (1 + reps / 30));
@@ -99,6 +98,7 @@ function applyBossDamageToState(stateBosses, entry, oneRm, isPR) {
   return copy;
 }
 
+// Räkna allt baserat på loggar + profil
 function recomputeFromLogs(logs, profile) {
   let xp = 0;
   let battleTier = 1;
@@ -123,8 +123,10 @@ function recomputeFromLogs(logs, profile) {
     const gainedXp = Math.max(5, Math.round(oneRm / 10));
     xp += gainedXp;
     battleTier = 1 + Math.floor(xp / 200);
+
     const currentPR = prMap[entry.exerciseId]?.best1RM || 0;
     const isPR = oneRm > currentPR;
+
     updatePRLocal(entry, oneRm);
     bosses = applyBossDamageToState(bosses, entry, oneRm, isPR);
   });
@@ -132,11 +134,9 @@ function recomputeFromLogs(logs, profile) {
   return { xp, battleTier, bosses, prMap };
 }
 
-// Muskelstats direkt från loggar + profil
+// Muskelstats baserat direkt på loggar (StrengthLevel-style)
 function computeMuscleStatsFromLogs(logs, profile) {
   const stats = {};
-
-  // initiera alla muskler
   MUSCLES.forEach((m) => {
     stats[m.id] = { score: 0, levelKey: "Beginner", percent: 0 };
   });
@@ -145,16 +145,17 @@ function computeMuscleStatsFromLogs(logs, profile) {
 
   const bw = profile?.weight || profile?.weight_kg || 60;
 
-  // bästa 1RM per övning
+  // Bästa 1RM per övning
   const best = {};
   logs.forEach((l) => {
+    if (!l.weight || !l.reps) return;
     const oneRm = calc1RM(l.weight, l.reps);
     if (!best[l.exerciseId] || oneRm > best[l.exerciseId]) {
       best[l.exerciseId] = oneRm;
     }
   });
 
-  // mappa best 1RM -> muskler
+  // Mappa 1RM => muskler
   Object.entries(best).forEach(([exId, oneRm]) => {
     const std = STRENGTH_STANDARDS[exId];
     if (!std) return;
@@ -170,7 +171,7 @@ function computeMuscleStatsFromLogs(logs, profile) {
     });
   });
 
-  // konvertera score → nivå + procent
+  // Score → nivå + %
   Object.keys(stats).forEach((mId) => {
     const val = stats[mId].score;
 
@@ -180,65 +181,77 @@ function computeMuscleStatsFromLogs(logs, profile) {
     if (val >= 1.0) level = "Advanced";
     if (val >= 1.25) level = "Elite";
 
-    const pct = Math.round((val / 1.25) * 100);
+    const pct = Math.min(150, Math.max(0, Math.round((val / 1.25) * 100)));
 
     stats[mId] = {
       score: val,
       levelKey: level,
-      percent: Math.min(150, Math.max(0, pct)),
+      percent: pct,
     };
   });
 
   return stats;
 }
 
-// ---------------- App ----------------
+// ------------------ HUVUDKOMPONENT ------------------
+
 export default function App() {
   const [view, setView] = useState("dashboard");
-  const [logs, setLogs] = useState([]);
-  const [bosses, setBosses] = useState(initialBosses);
-  const [xp, setXp] = useState(0);
-  const [battleTier, setBattleTier] = useState(1);
-  const [toast, setToast] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [lastSet, setLastSet] = useState(null);
-  const [prMap, setPrMap] = useState({});
-  const [activeProgramId, setActiveProgramId] = useState(PROGRAMS[0].id);
-  const [dayIndex, setDayIndex] = useState(0);
-  const [claimedRewards, setClaimedRewards] = useState([]);
 
-  const [profile, setProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem("bebi_profile");
-      return saved
-        ? JSON.parse(saved)
-        : {
-            name: "Maria Kristina",
-            nick: "Bebi",
-            age: 21,
-            height: 170,
-            weight: 68,
-            avatar: "/avatar.png",
-          };
-    } catch {
-      return {
-        name: "Maria Kristina",
-        nick: "Bebi",
-        age: 21,
-        height: 170,
-        weight: 68,
-        avatar: "/avatar.png",
-      };
-    }
+  // Loggar – persisteras
+  const [logs, setLogs] = useState(() => {
+    const saved = localStorage.getItem("bebi_logs");
+    return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem("bebi_profile", JSON.stringify(profile));
-    } catch {
-      // ignorerar om localStorage inte finns
-    }
+    localStorage.setItem("bebi_logs", JSON.stringify(logs));
+  }, [logs]);
+
+  // Profil – persisteras
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem("bebi_profile");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          name: "Maria Kristina",
+          nick: "Bebi",
+          age: 21,
+          height: 170,
+          weight: 68,
+          avatar: "/avatar.png",
+        };
+  });
+
+  useEffect(() => {
+    localStorage.setItem("bebi_profile", JSON.stringify(profile));
   }, [profile]);
+
+  // Kroppsmått – persisteras
+  const [bodyStats, setBodyStats] = useState(() => {
+    const saved = localStorage.getItem("bebi_bodyStats");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          waist: [],
+          hips: [],
+          thigh: [],
+          glutes: [],
+          chest: [],
+          arm: [],
+        };
+  });
+
+  useEffect(() => {
+    localStorage.setItem("bebi_bodyStats", JSON.stringify(bodyStats));
+  }, [bodyStats]);
+
+  const [toast, setToast] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [lastSet, setLastSet] = useState(null);
+  const [activeProgramId, setActiveProgramId] = useState(PROGRAMS[0].id);
+  const [dayIndex, setDayIndex] = useState(0);
+  const [claimedRewards, setClaimedRewards] = useState([]);
 
   const { mood, bumpMood } = useBebiMood();
 
@@ -247,80 +260,17 @@ export default function App() {
     setTimeout(() => setToast(null), 2600);
   }
 
-  function updatePR(entry, new1RM) {
-    setPrMap((prev) => {
-      const current = prev[entry.exerciseId] || { best1RM: 0, history: [] };
-      const isPR = new1RM > (current.best1RM || 0);
-      const history = [...current.history, { ...entry, oneRm: new1RM }];
-      const best1RM = isPR ? new1RM : current.best1RM;
-      return {
-        ...prev,
-        [entry.exerciseId]: { best1RM, history },
-      };
-    });
-  }
-
-  function applyBossDamage(entry, oneRm, isPR) {
-    setBosses((prev) => applyBossDamageToState(prev, entry, oneRm, isPR));
-  }
-
-  function handleSaveSet(entry) {
-    const oneRm = calc1RM(entry.weight, entry.reps);
-
-    setLogs((prev) => [entry, ...prev]);
-    setLastSet(entry);
-
-    const gainedXp = Math.max(5, Math.round(oneRm / 10));
-    const totalXp = xp + gainedXp;
-    setXp(totalXp);
-
-    const newTier = 1 + Math.floor(totalXp / 200);
-    if (newTier !== battleTier) {
-      setBattleTier(newTier);
-      showToastMsg(
-        "Battle Pass Tier Up 🎟️",
-        `Starkiii! Du nådde tier ${newTier} i Battle Pass 💖`
-      );
-    }
-
-    const currentPR = prMap[entry.exerciseId]?.best1RM || 0;
-    const isPR = oneRm > currentPR;
-
-    updatePR(entry, oneRm);
-    applyBossDamage(entry, oneRm, isPR);
-
-    if (isPR) {
-      bumpMood("pr");
-      showToastMsg("OMG BEBI!! NYTT PR!!! 🔥💖", "Du är helt magisk, jag svär.");
-    } else if (entry.weight >= (lastSet?.weight || 0) * 1.1) {
-      bumpMood("heavy_set");
-      showToastMsg("Starkiii set! 💪", "Du tog i extra hårt nyss!");
-    } else {
-      showToastMsg("Set sparat 💪", "Bebi, du blev precis lite starkare.");
-    }
-
-    setShowModal(false);
-  }
-
-  function handleDeleteLog(id) {
-    const newLogs = logs.filter((l) => l.id !== id);
-    const recalced = recomputeFromLogs(newLogs, profile);
-    setLogs(newLogs);
-    setXp(recalced.xp);
-    setBattleTier(recalced.battleTier);
-    setBosses(recalced.bosses);
-    setPrMap(recalced.prMap);
-    showToastMsg(
-      "Logg borttagen 🗑️",
-      "Statistik, PR & boss-HP har uppdaterats."
-    );
-  }
-
-  const muscleStats = useMemo(
-    () => computeMuscleStatsFromLogs(logs, profile),
-    [logs, profile.weight, profile.age]
+  // Recompute XP, BattlePass, Bossar, PRs från loggar
+  const { xp, battleTier, bosses, prMap } = useMemo(
+    () => recomputeFromLogs(logs, profile),
+    [logs, profile.weight]
   );
 
+  // Muskelkarta + jämförelsedata
+  const muscleStats = useMemo(
+    () => computeMuscleStatsFromLogs(logs, profile),
+    [logs, profile.weight]
+  );
   const comparisonData = useMemo(
     () => buildComparisonChartData(muscleStats),
     [muscleStats]
@@ -375,9 +325,7 @@ export default function App() {
     const bossesArray = Object.values(bosses);
     const totalMax = bossesArray.reduce((s, b) => s + b.maxHP, 0);
     const totalCurrent = bossesArray.reduce((s, b) => s + b.currentHP, 0);
-    const totalPct = totalMax
-      ? Math.round(100 * (1 - totalCurrent / totalMax))
-      : 0;
+    const totalPct = totalMax ? Math.round(100 * (1 - totalCurrent / totalMax)) : 0;
     if (totalPct >= 50)
       arr.push({
         id: "ach_raid_50",
@@ -410,6 +358,53 @@ export default function App() {
 
   const nextTierXp = battleTier * 200;
 
+  function handleSaveSet(entry) {
+    const today = new Date().toISOString().slice(0, 10);
+    const finalEntry = {
+      ...entry,
+      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36),
+      date: entry.date || today,
+    };
+
+    // PR-check innan vi uppdaterar loggar
+    const previousForExercise = logs.filter(
+      (l) => l.exerciseId === finalEntry.exerciseId
+    );
+    const prevBest = previousForExercise.length
+      ? Math.max(...previousForExercise.map((l) => calc1RM(l.weight, l.reps)))
+      : 0;
+    const this1RM = calc1RM(finalEntry.weight, finalEntry.reps);
+    const isPR = this1RM > prevBest;
+
+    setLogs((prev) => [finalEntry, ...prev]);
+    setLastSet(finalEntry);
+
+    if (isPR) {
+      bumpMood("pr");
+      showToastMsg("OMG BEBI!! NYTT PR!!! 🔥💖", "Du är helt magisk, jag svär.");
+    } else if (
+      lastSet &&
+      finalEntry.exerciseId === lastSet.exerciseId &&
+      finalEntry.weight >= lastSet.weight * 1.1
+    ) {
+      bumpMood("heavy_set");
+      showToastMsg("Starkiii set! 💪", "Du tog i extra hårt nyss!");
+    } else {
+      showToastMsg("Set sparat 💪", "Bebi, du blev precis lite starkare.");
+    }
+
+    setShowModal(false);
+  }
+
+  function handleDeleteLog(id) {
+    const newLogs = logs.filter((l) => l.id !== id);
+    setLogs(newLogs);
+    showToastMsg(
+      "Logg borttagen 🗑️",
+      "Statistik, PR, boss-HP & muskelkarta har uppdaterats."
+    );
+  }
+
   function handleSelectProgram(id) {
     setActiveProgramId(id);
     setDayIndex(0);
@@ -429,10 +424,7 @@ export default function App() {
     setClaimedRewards((prev) => [...prev, id]);
     bumpMood("achievement");
     const r = BATTLE_REWARDS.find((x) => x.id === id);
-    showToastMsg(
-      "Reward klaimad 🎁",
-      r ? r.label : "Du tog en battle pass-belöning!"
-    );
+    showToastMsg("Reward klaimad 🎁", r ? r.label : "Du tog en battle pass-belöning!");
   }
 
   return (
@@ -443,7 +435,7 @@ export default function App() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <div>
-            <div className="sidebar-title">Bebi Gym</div>
+            <div className="sidebar-title">Bebi Gym v17</div>
             <div className="sidebar-sub">För Maria Kristina 💗</div>
           </div>
         </div>
@@ -458,7 +450,6 @@ export default function App() {
             <span className="icon">🏠</span>
             <span>Dashboard</span>
           </button>
-
           <button
             className={`sidebar-link ${view === "log" ? "active" : ""}`}
             onClick={() => setView("log")}
@@ -466,7 +457,6 @@ export default function App() {
             <span className="icon">📓</span>
             <span>Logga pass</span>
           </button>
-
           <button
             className={`sidebar-link ${
               view === "program" ? "active" : ""
@@ -476,7 +466,6 @@ export default function App() {
             <span className="icon">📅</span>
             <span>Program</span>
           </button>
-
           <button
             className={`sidebar-link ${view === "boss" ? "active" : ""}`}
             onClick={() => setView("boss")}
@@ -484,7 +473,13 @@ export default function App() {
             <span className="icon">🐲</span>
             <span>Boss Raid</span>
           </button>
-
+          <button
+            className={`sidebar-link ${view === "lift" ? "active" : ""}`}
+            onClick={() => setView("lift")}
+          >
+            <span className="icon">🛠</span>
+            <span>Lift Tools</span>
+          </button>
           <button
             className={`sidebar-link ${view === "ach" ? "active" : ""}`}
             onClick={() => setView("ach")}
@@ -492,7 +487,6 @@ export default function App() {
             <span className="icon">🏅</span>
             <span>Achievements</span>
           </button>
-
           <button
             className={`sidebar-link ${view === "pr" ? "active" : ""}`}
             onClick={() => setView("pr")}
@@ -500,7 +494,6 @@ export default function App() {
             <span className="icon">🏆</span>
             <span>PR-lista</span>
           </button>
-
           <button
             className={`sidebar-link ${
               view === "profile" ? "active" : ""
@@ -524,10 +517,12 @@ export default function App() {
       <main className="main">
         <div className="main-header">
           <div>
-            <div className="main-title">Hej {profile.nick}! 💖</div>
+            <div className="main-title">
+              Hej {profile.nick}! 💖
+            </div>
             <div className="main-sub">
-              Idag är en perfekt dag att bli starkare. Varje set du gör
-              skadar bossar, ger XP och bygger din PR-historia.
+              Idag är en perfekt dag att bli starkare. Varje set du gör skadar
+              bossar, ger XP och bygger din PR-historia.
             </div>
           </div>
           <button className="btn-pink" onClick={() => setShowModal(true)}>
@@ -539,16 +534,16 @@ export default function App() {
         {view === "dashboard" && (
           <div className="row" style={{ alignItems: "flex-start" }}>
             <div className="col" style={{ flex: 1, gap: 10 }}>
-              <ProfileCard profile={profile} setProfile={setProfile} />
-
               <div className="card small">
                 <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
                 >
                   <div>
-                    <div
-                      style={{ fontSize: 13, fontWeight: 600 }}
-                    >
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>
                       XP & Level
                     </div>
                     <div className="small">
@@ -560,7 +555,6 @@ export default function App() {
                     <div>Tier {battleTier}</div>
                   </div>
                 </div>
-
                 <div className="progress-wrap" style={{ marginTop: 6 }}>
                   <div
                     className="progress-fill"
@@ -572,7 +566,6 @@ export default function App() {
                     }}
                   />
                 </div>
-
                 <div className="small" style={{ marginTop: 4 }}>
                   Nästa tier vid {nextTierXp} XP
                 </div>
@@ -603,14 +596,12 @@ export default function App() {
         {view === "log" && (
           <div className="card">
             <h3 style={{ marginTop: 0 }}>Loggade set 📓</h3>
-
             {!logs.length && (
               <p className="small">
-                Inga set än. Klicka på “Logga set” för att lägga till ditt
-                första pass, Bebi 💗
+                Inga set än. Klicka på “Logga set” för att lägga till ditt första
+                pass, Bebi 💗
               </p>
             )}
-
             <ul
               style={{
                 paddingLeft: 0,
@@ -689,6 +680,31 @@ export default function App() {
           </div>
         )}
 
+        {/* LIFT TOOLS */}
+        {view === "lift" && (
+          <div className="card" style={{ padding: 20 }}>
+            <div className="main-header" style={{ marginBottom: 10 }}>
+              <div>
+                <div className="main-title">Lift Tools 🛠️</div>
+                <div className="main-sub">
+                  1RM, volym, grafer & kroppsmått – allt på ett ställe.
+                </div>
+              </div>
+            </div>
+            <LiftTools
+              logs={logs}
+              bodyStats={bodyStats}
+              onAddManual={(entry) => {
+                setLogs((prev) => [entry, ...prev]);
+                showToastMsg(
+                  "Lyft tillagt ✨",
+                  "Ditt tidigare lyft är nu sparat i historiken."
+                );
+              }}
+            />
+          </div>
+        )}
+
         {/* ACHIEVEMENTS */}
         {view === "ach" && <Achievements unlocked={unlockedAchievements} />}
 
@@ -697,11 +713,20 @@ export default function App() {
 
         {/* PROFIL */}
         {view === "profile" && (
-          <ProfileView profile={profile} setProfile={setProfile} />
+          <ProfileView
+            profile={profile}
+            setProfile={setProfile}
+            bodyStats={bodyStats}
+            onAddMeasurement={(key, entry) => {
+              setBodyStats((prev) => {
+                const arr = prev[key] || [];
+                return { ...prev, [key]: [...arr, entry] };
+              });
+            }}
+          />
         )}
       </main>
 
-      {/* LOG MODAL */}
       <LogModal
         open={showModal}
         onClose={() => setShowModal(false)}

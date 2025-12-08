@@ -441,69 +441,56 @@ export default function App() {
         </div>
 
         <div className="sidebar-nav">
-          <button
-            className={`sidebar-link ${
-              view === "dashboard" ? "active" : ""
-            }`}
-            onClick={() => setView("dashboard")}
-          >
-            <span className="icon">🏠</span>
-            <span>Dashboard</span>
-          </button>
-          <button
-            className={`sidebar-link ${view === "log" ? "active" : ""}`}
-            onClick={() => setView("log")}
-          >
-            <span className="icon">📓</span>
-            <span>Logga pass</span>
-          </button>
-          <button
-            className={`sidebar-link ${
-              view === "program" ? "active" : ""
-            }`}
-            onClick={() => setView("program")}
-          >
-            <span className="icon">📅</span>
-            <span>Program</span>
-          </button>
-          <button
-            className={`sidebar-link ${view === "boss" ? "active" : ""}`}
-            onClick={() => setView("boss")}
-          >
-            <span className="icon">🐲</span>
-            <span>Boss Raid</span>
-          </button>
-          <button
-            className={`sidebar-link ${view === "lift" ? "active" : ""}`}
-            onClick={() => setView("lift")}
-          >
-            <span className="icon">🛠</span>
-            <span>Lift Tools</span>
-          </button>
-          <button
-            className={`sidebar-link ${view === "ach" ? "active" : ""}`}
-            onClick={() => setView("ach")}
-          >
-            <span className="icon">🏅</span>
-            <span>Achievements</span>
-          </button>
-          <button
-            className={`sidebar-link ${view === "pr" ? "active" : ""}`}
-            onClick={() => setView("pr")}
-          >
-            <span className="icon">🏆</span>
-            <span>PR-lista</span>
-          </button>
-          <button
-            className={`sidebar-link ${
-              view === "profile" ? "active" : ""
-            }`}
-            onClick={() => setView("profile")}
-          >
-            <span className="icon">👤</span>
-            <span>Profil</span>
-          </button>
-        </div>
+
+  <button className={`sidebar-link ${view === 'dashboard' ? 'active' : ''}`}
+    onClick={() => setView('dashboard')}>
+    <span className="icon">🏠</span>
+    <span>Dashboard</span>
+  </button>
+
+  <button className={`sidebar-link ${view === 'log' ? 'active' : ''}`}
+    onClick={() => setView('log')}>
+    <span className="icon">📓</span>
+    <span>Log</span>
+  </button>
+
+  <button className={`sidebar-link ${view === 'program' ? 'active' : ''}`}
+    onClick={() => setView('program')}>
+    <span className="icon">📅</span>
+    <span>Program</span>
+  </button>
+
+  <button className={`sidebar-link ${view === 'boss' ? 'active' : ''}`}
+    onClick={() => setView('boss')}>
+    <span className="icon">🐲</span>
+    <span>Boss</span>
+  </button>
+
+  <button className={`sidebar-link ${view === 'ach' ? 'active' : ''}`}
+    onClick={() => setView('ach')}>
+    <span className="icon">🏅</span>
+    <span>Achievements</span>
+  </button>
+
+  <button className={`sidebar-link ${view === 'pr' ? 'active' : ''}`}
+    onClick={() => setView('pr')}>
+    <span className="icon">🏆</span>
+    <span>PR</span>
+  </button>
+
+  <button className={`sidebar-link ${view === 'profile' ? 'active' : ''}`}
+    onClick={() => setView('profile')}>
+    <span className="icon">👤</span>
+    <span>Profil</span>
+  </button>
+
+  <button className={`sidebar-link ${view === 'lift' ? 'active' : ''}`}
+    onClick={() => setView('lift')}>
+    <span className="icon">📈</span>
+    <span>LiftTools</span>
+  </button>
+
+</div>
 
         <div style={{ marginTop: "auto", fontSize: 11, color: "#9ca3af" }}>
           <div>Bebi: {profile.name}</div>

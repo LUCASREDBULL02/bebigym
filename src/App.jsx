@@ -197,6 +197,7 @@ function computeMuscleStatsFromLogs(logs, profile) {
 
 export default function App() {
   const [view, setView] = useState("dashboard");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Loggar – persisteras
   const [logs, setLogs] = useState(() => {
@@ -280,7 +281,7 @@ export default function App() {
     const arr = [];
 
     if (logs.length >= 1)
-      arr.push({
+      arr.append({
         id: "ach_first",
         title: "Första passet! 💖",
         desc: "Du loggade ditt första pass.",
@@ -431,7 +432,7 @@ export default function App() {
     <div className="app-shell">
       {toast && <Toast title={toast.title} subtitle={toast.subtitle} />}
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR (desktop) */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <div>
@@ -441,56 +442,70 @@ export default function App() {
         </div>
 
         <div className="sidebar-nav">
+          <button
+            className={`sidebar-link ${view === "dashboard" ? "active" : ""}`}
+            onClick={() => setView("dashboard")}
+          >
+            <span className="icon">🏠</span>
+            <span>Dashboard</span>
+          </button>
 
-  <button className={`sidebar-link ${view === 'dashboard' ? 'active' : ''}`}
-    onClick={() => setView('dashboard')}>
-    <span className="icon">🏠</span>
-    <span>Dashboard</span>
-  </button>
+          <button
+            className={`sidebar-link ${view === "log" ? "active" : ""}`}
+            onClick={() => setView("log")}
+          >
+            <span className="icon">📓</span>
+            <span>Log</span>
+          </button>
 
-  <button className={`sidebar-link ${view === 'log' ? 'active' : ''}`}
-    onClick={() => setView('log')}>
-    <span className="icon">📓</span>
-    <span>Log</span>
-  </button>
+          <button
+            className={`sidebar-link ${view === "program" ? "active" : ""}`}
+            onClick={() => setView("program")}
+          >
+            <span className="icon">📅</span>
+            <span>Program</span>
+          </button>
 
-  <button className={`sidebar-link ${view === 'program' ? 'active' : ''}`}
-    onClick={() => setView('program')}>
-    <span className="icon">📅</span>
-    <span>Program</span>
-  </button>
+          <button
+            className={`sidebar-link ${view === "boss" ? "active" : ""}`}
+            onClick={() => setView("boss")}
+          >
+            <span className="icon">🐲</span>
+            <span>Boss</span>
+          </button>
 
-  <button className={`sidebar-link ${view === 'boss' ? 'active' : ''}`}
-    onClick={() => setView('boss')}>
-    <span className="icon">🐲</span>
-    <span>Boss</span>
-  </button>
+          <button
+            className={`sidebar-link ${view === "ach" ? "active" : ""}`}
+            onClick={() => setView("ach")}
+          >
+            <span className="icon">🏅</span>
+            <span>Achievements</span>
+          </button>
 
-  <button className={`sidebar-link ${view === 'ach' ? 'active' : ''}`}
-    onClick={() => setView('ach')}>
-    <span className="icon">🏅</span>
-    <span>Achievements</span>
-  </button>
+          <button
+            className={`sidebar-link ${view === "pr" ? "active" : ""}`}
+            onClick={() => setView("pr")}
+          >
+            <span className="icon">🏆</span>
+            <span>PR</span>
+          </button>
 
-  <button className={`sidebar-link ${view === 'pr' ? 'active' : ''}`}
-    onClick={() => setView('pr')}>
-    <span className="icon">🏆</span>
-    <span>PR</span>
-  </button>
+          <button
+            className={`sidebar-link ${view === "profile" ? "active" : ""}`}
+            onClick={() => setView("profile")}
+          >
+            <span className="icon">👤</span>
+            <span>Profil</span>
+          </button>
 
-  <button className={`sidebar-link ${view === 'profile' ? 'active' : ''}`}
-    onClick={() => setView('profile')}>
-    <span className="icon">👤</span>
-    <span>Profil</span>
-  </button>
-
-  <button className={`sidebar-link ${view === 'lift' ? 'active' : ''}`}
-    onClick={() => setView('lift')}>
-    <span className="icon">📈</span>
-    <span>LiftTools</span>
-  </button>
-
-</div>
+          <button
+            className={`sidebar-link ${view === "lift" ? "active" : ""}`}
+            onClick={() => setView("lift")}
+          >
+            <span className="icon">📈</span>
+            <span>LiftTools</span>
+          </button>
+        </div>
 
         <div style={{ marginTop: "auto", fontSize: 11, color: "#9ca3af" }}>
           <div>Bebi: {profile.name}</div>
@@ -500,13 +515,98 @@ export default function App() {
         </div>
       </aside>
 
+      {/* MOBILE DRAWER */}
+      <div className={`mobile-drawer ${mobileMenuOpen ? "open" : ""}`}>
+        <div className="drawer-header">
+          <span style={{ fontWeight: 600 }}>Bebi Gym 💗</span>
+          <button
+            className="close-btn"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            ×
+          </button>
+        </div>
+        <div className="drawer-links">
+          <button
+            onClick={() => {
+              setView("dashboard");
+              setMobileMenuOpen(false);
+            }}
+          >
+            🏠 Dashboard
+          </button>
+          <button
+            onClick={() => {
+              setView("log");
+              setMobileMenuOpen(false);
+            }}
+          >
+            📓 Logga pass
+          </button>
+          <button
+            onClick={() => {
+              setView("program");
+              setMobileMenuOpen(false);
+            }}
+          >
+            📅 Program
+          </button>
+          <button
+            onClick={() => {
+              setView("boss");
+              setMobileMenuOpen(false);
+            }}
+          >
+            🐲 Boss Raid
+          </button>
+          <button
+            onClick={() => {
+              setView("ach");
+              setMobileMenuOpen(false);
+            }}
+          >
+            🏅 Achievements
+          </button>
+          <button
+            onClick={() => {
+              setView("pr");
+              setMobileMenuOpen(false);
+            }}
+          >
+            🏆 PR-lista
+          </button>
+          <button
+            onClick={() => {
+              setView("profile");
+              setMobileMenuOpen(false);
+            }}
+          >
+            👤 Profil
+          </button>
+          <button
+            onClick={() => {
+              setView("lift");
+              setMobileMenuOpen(false);
+            }}
+          >
+            📈 Lift Tools
+          </button>
+        </div>
+      </div>
+
       {/* MAIN */}
       <main className="main">
         <div className="main-header">
+          {/* Hamburger på mobil */}
+          <button
+            className="hamburger-btn"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            ☰
+          </button>
+
           <div>
-            <div className="main-title">
-              Hej {profile.nick}! 💖
-            </div>
+            <div className="main-title">Hej {profile.nick}! 💖</div>
             <div className="main-sub">
               Idag är en perfekt dag att bli starkare. Varje set du gör skadar
               bossar, ger XP och bygger din PR-historia.

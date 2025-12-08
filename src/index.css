@@ -436,3 +436,82 @@ body {
     font-size: 18px;
   }
 }
+/* ========== MOBILE HAMBURGER MENU STYLE ========== */
+
+.hamburger-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Hide original sidebar */
+  .sidebar {
+    display: none !important;
+  }
+
+  /* Show hamburger icon */
+  .hamburger-btn {
+    display: inline-block;
+    font-size: 26px;
+    background: none;
+    border: none;
+    color: #e5e7eb;
+    margin-right: 12px;
+  }
+
+  /* Drawer Slide-In Menu */
+  .mobile-drawer {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    width: 260px;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.96);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4);
+    padding: 18px;
+    transition: left 0.28s ease;
+    z-index: 99999;
+  }
+
+  .mobile-drawer.open {
+    left: 0;
+  }
+
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #f9fafb;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .close-btn {
+    font-size: 32px;
+    background: none;
+    border: none;
+    color: #e5e7eb;
+    padding: 0;
+    line-height: 0.7;
+  }
+
+  .drawer-links button {
+    width: 100%;
+    text-align: left;
+    padding: 10px 0;
+    border: none;
+    background: none;
+    color: #e5e7eb;
+    font-size: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .drawer-links button:hover {
+    color: #f472b6;
+  }
+
+  /* Content must not hide behind drawer */
+  .main {
+    padding-top: 10px;
+  }
+}

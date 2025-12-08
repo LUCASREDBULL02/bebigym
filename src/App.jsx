@@ -281,7 +281,7 @@ export default function App() {
     const arr = [];
 
     if (logs.length >= 1)
-      arr.append({
+     arr.push({
         id: "ach_first",
         title: "Första passet! 💖",
         desc: "Du loggade ditt första pass.",

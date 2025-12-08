@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import BebiAvatar from "./BebiAvatar.jsx";
+import BodyMeasurementChart from "./BodyMeasurementChart.jsx";
 
 const MEASUREMENT_FIELDS = [
   { key: "waist", label: "Midja (cm)" },

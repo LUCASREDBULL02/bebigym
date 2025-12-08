@@ -3,13 +3,82 @@ import BebiAvatar from "./BebiAvatar.jsx";
 import BodyMeasurementChart from "./BodyMeasurementChart.jsx";
 
 const MEASUREMENT_FIELDS = [
-  { key: "waist", label: "Midja (cm)" },
-  { key: "hips", label: "Höft (cm)" },
-  { key: "thigh", label: "Lår (cm)" },
-  { key: "glutes", label: "Rumpa (cm)" },
-  { key: "chest", label: "Bröst (cm)" },
-  { key: "arm", label: "Arm (cm)" },
-];
+<div className="card" style={{ marginTop: 15 }}>
+  <h3 style={{ marginTop: 0 }}>Kroppsmått 📏</h3>
+
+  {[
+    ["waist", "Midja"],
+    ["hips", "Höfter"],
+    ["thigh", "Lår"],
+    ["glutes", "Rumpa"],
+    ["chest", "Bröst"],
+    ["arm", "Arm"],
+  ].map(([key, label]) => (
+    <div key={key} style={{ marginBottom: 22 }}>
+      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
+        {label}
+      </div>
+
+      {/* LISTA */}
+      <ul style={{ paddingLeft: 0, listStyle: "none", marginTop: 6 }}>
+        {bodyStats[key]?.map((m) => (
+          <li
+            key={m.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 4,
+              padding: "4px 6px",
+              borderRadius: 8,
+              background: "rgba(15,23,42,0.9)",
+              border: "1px solid rgba(148,163,184,0.5)",
+              fontSize: 12,
+            }}
+          >
+            <div>
+              {m.date} — {m.value} cm
+            </div>
+            <button
+              className="btn"
+              style={{ fontSize: 11, padding: "3px 7px" }}
+              onClick={() => {
+                if (window.confirm(`Ta bort detta ${label.toLowerCase()}-mått?`)) {
+                  onDeleteMeasurement(key, m.id);
+                }
+              }}
+            >
+              🗑️
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {/* GRAF */}
+      <BodyMeasurementChart label={label} dataPoints={bodyStats[key]} />
+
+      {/* Lägg till mått */}
+      <button
+        className="btn-pink"
+        style={{ marginTop: 6, fontSize: 12 }}
+        onClick={() => {
+          const value = prompt(`Ange nytt mått för ${label} (cm)`);
+          if (!value) return;
+          const date = new Date().toISOString().slice(0, 10);
+
+          onAddMeasurement(key, {
+            id: crypto.randomUUID(),
+            value,
+            date,
+          });
+        }}
+      >
+        + Lägg till {label}
+      </button>
+    </div>
+  ))}
+</div>
+
 <BodyMeasurementChart
   label={label}
   dataPoints={bodyStats[key]}

@@ -58,9 +58,7 @@ export default function ProfileView({
     <div className="profile-container">
 
       {/* HEADER */}
-      <h2 className="profile-header">
-        👤 Din Profil
-      </h2>
+      <h2 className="profile-header">👤 Din Profil</h2>
 
       {/* PROFILE CARD */}
       <div className="profile-card">
@@ -88,4 +86,91 @@ export default function ProfileView({
             <input
               type="number"
               value={form.age}
-              onChange={(e) => setForm
+              onChange={(e) => setForm({ ...form, age: e.target.value })}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Längd (cm)</label>
+            <input
+              type="number"
+              value={form.height}
+              onChange={(e) => setForm({ ...form, height: e.target.value })}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Vikt (kg)</label>
+            <input
+              type="number"
+              value={form.weight}
+              onChange={(e) => setForm({ ...form, weight: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <button className="save-btn" onClick={handleSaveProfile}>
+          💾 Spara profil
+        </button>
+      </div>
+
+      {/* MEASUREMENTS */}
+      <div className="profile-card">
+        <h3 className="section-title">📏 Kroppsmått</h3>
+
+        <div className="measure-input">
+          <select
+            value={newMeasurement.key}
+            onChange={(e) =>
+              setNewMeasurement({ ...newMeasurement, key: e.target.value })
+            }
+          >
+            {Object.keys(measurementLabels).map((k) => (
+              <option key={k} value={k}>
+                {measurementLabels[k]}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            placeholder="cm"
+            value={newMeasurement.value}
+            onChange={(e) =>
+              setNewMeasurement({ ...newMeasurement, value: e.target.value })
+            }
+          />
+
+          <button className="add-btn" onClick={handleAddMeasurement}>
+            ➕
+          </button>
+        </div>
+
+        {/* LISTA FÖR VARJE KROPPSMÅTT */}
+        {Object.keys(bodyStats).map((key) => (
+          <div key={key} className="measurement-section">
+            <h4 className="measurement-title">{measurementLabels[key]}</h4>
+
+            {bodyStats[key].length === 0 && (
+              <p className="empty-text">Inga mått ännu</p>
+            )}
+
+            {bodyStats[key].map((m) => (
+              <div key={m.id} className="measurement-row">
+                <div>
+                  {m.date} – <strong>{m.value} cm</strong>
+                </div>
+                <button
+                  className="delete-btn"
+                  onClick={() => onDeleteMeasurement(key, m.id)}
+                >
+                  ✖
+                </button>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

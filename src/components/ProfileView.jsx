@@ -2,26 +2,35 @@
 import React, { useState } from "react";
 import BodyMeasurementChart from "./BodyMeasurementChart.jsx";
 
-export default function ProfileView({ profile, setProfile, bodyStats, onAddMeasurement, onDeleteMeasurement }) {
-  const [edit, setEdit] = useState({
-    name: profile.name,
-    nick: profile.nick,
-    age: profile.age,
-    height: profile.height,
-    weight: profile.weight,
-  });
+export default function ProfileView({
+  profile,
+  setProfile,
+  bodyStats,
+  onAddMeasurement,
+  onDeleteMeasurement
+}) {
+  const [edit, setEdit] = useState({ ...profile });
 
   function handleSave() {
     setProfile(edit);
   }
 
+  const measurementFields = [
+    ["waist", "Midja"],
+    ["hips", "Höfter"],
+    ["thigh", "Lår"],
+    ["glutes", "Rumpa"],
+    ["chest", "Bröst"],
+    ["arm", "Arm"],
+  ];
+
   return (
-    <div className="card" style={{ padding: 20 }}>
+    <div className="card" style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
       <h2 style={{ marginTop: 0, marginBottom: 10 }}>Profil 💗</h2>
 
-      {/* PROFILE FIELDS */}
+      {/* PROFILE INPUTS */}
       <div className="row" style={{ gap: 10 }}>
-        <div className="col" style={{ flex: 1 }}>
+        <div className="col">
           <label className="small">Namn</label>
           <input
             className="input"
@@ -29,7 +38,7 @@ export default function ProfileView({ profile, setProfile, bodyStats, onAddMeasu
             onChange={(e) => setEdit({ ...edit, name: e.target.value })}
           />
         </div>
-        <div className="col" style={{ flex: 1 }}>
+        <div className="col">
           <label className="small">Nick</label>
           <input
             className="input"
@@ -40,7 +49,7 @@ export default function ProfileView({ profile, setProfile, bodyStats, onAddMeasu
       </div>
 
       <div className="row" style={{ gap: 10, marginTop: 10 }}>
-        <div className="col" style={{ flex: 1 }}>
+        <div className="col">
           <label className="small">Ålder</label>
           <input
             type="number"
@@ -49,62 +58,75 @@ export default function ProfileView({ profile, setProfile, bodyStats, onAddMeasu
             onChange={(e) => setEdit({ ...edit, age: Number(e.target.value) })}
           />
         </div>
-        <div className="col" style={{ flex: 1 }}>
+
+        <div className="col">
           <label className="small">Längd (cm)</label>
           <input
             type="number"
             className="input"
             value={edit.height}
-            onChange={(e) =>
-              setEdit({ ...edit, height: Number(e.target.value) })
-            }
+            onChange={(e) => setEdit({ ...edit, height: Number(e.target.value) })}
           />
         </div>
-        <div className="col" style={{ flex: 1 }}>
+
+        <div className="col">
           <label className="small">Vikt (kg)</label>
           <input
             type="number"
             className="input"
             value={edit.weight}
-            onChange={(e) =>
-              setEdit({ ...edit, weight: Number(e.target.value) })
-            }
+            onChange={(e) => setEdit({ ...edit, weight: Number(e.target.value) })}
           />
         </div>
       </div>
 
       <button className="btn-pink" style={{ marginTop: 15 }} onClick={handleSave}>
-        Spara profil
+        💾 Spara profil
       </button>
 
       {/* BODY MEASUREMENTS */}
-      <div className="divider" style={{ margin: "20px 0" }} />
+      <div className="divider" style={{ margin: "25px 0" }} />
 
-      <h2 style={{ marginTop: 0 }}>Kroppsmått 📏</h2>
+      <h2 style={{ marginBottom: 10 }}>Kroppsmått 📏</h2>
 
-      {[
-        ["waist", "Midja"],
-        ["hips", "Höfter"],
-        ["thigh", "Lår"],
-        ["glutes", "Rumpa"],
-        ["chest", "Bröst"],
-        ["arm", "Arm"],
-      ].map(([key, label]) => {
+      {measurementFields.map(([key, label]) => {
         const list = bodyStats[key] || [];
 
         return (
           <div key={key} style={{ marginBottom: 25 }}>
-            <div
-              style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}
-            >
-              {label}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <strong style={{ fontSize: 14 }}>{label}</strong>
+
+              <button
+                className="btn-pink"
+                style={{ fontSize: 12, padding: "4px 10px" }}
+                onClick={() => {
+                  const value = prompt(`Ange nytt mått för ${label} (cm)`);
+                  if (!value) return;
+
+                  const date = new Date().toISOString().slice(0, 10);
+
+                  onAddMeasurement(key, {
+                    id: crypto.randomUUID(),
+                    value: Number(value),
+                    date,
+                  });
+                }}
+              >
+                + Lägg till
+              </button>
             </div>
 
-            {/* LISTA */}
-            <ul style={{ paddingLeft: 0, listStyle: "none", marginTop: 6 }}>
+            {/* CHART */}
+            <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 8, padding: 10 }}>
+              <BodyMeasurementChart label={label} dataPoints={list} />
+            </div>
+
+            {/* MEASUREMENT LIST */}
+            <ul style={{ paddingLeft: 0, listStyle: "none", marginTop: 8 }}>
               {list.length === 0 && (
                 <div className="small" style={{ opacity: 0.6 }}>
-                  Inga registrerade mått än
+                  Inga mått än
                 </div>
               )}
 
@@ -113,59 +135,41 @@ export default function ProfileView({ profile, setProfile, bodyStats, onAddMeasu
                   key={m.id}
                   style={{
                     fontSize: 12,
-                    marginBottom: 4,
-                    padding: "4px 6px",
-                    borderRadius: 8,
-                    background: "rgba(15,23,42,0.9)",
-                    border: "1px solid rgba(148,163,184,0.5)",
+                    marginBottom: 6,
+                    padding: "6px 8px",
+                    background: "rgba(15,23,42,0.8)",
+                    borderRadius: 6,
+                    border: "1px solid rgba(148,163,184,0.3)",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
                 >
                   <div>
-                    {m.date} — {m.value} cm
+                    <strong>{m.value} cm</strong> —{" "}
+                    <span style={{ opacity: 0.8 }}>{m.date}</span>
                   </div>
 
                   <button
                     className="btn"
-                    style={{ fontSize: 11, padding: "3px 7px" }}
+                    style={{
+                      fontSize: 12,
+                      padding: "3px 8px",
+                      background: "rgba(255,0,0,0.15)",
+                      border: "1px solid rgba(255,0,0,0.4)",
+                      color: "#ff8888",
+                    }}
                     onClick={() => {
-                      if (window.confirm(`Ta bort detta ${label}-mått?`)) {
+                      if (window.confirm(`Vill du ta bort detta mått?`)) {
                         onDeleteMeasurement(key, m.id);
                       }
                     }}
                   >
-                    🗑️
+                    Ta bort
                   </button>
                 </li>
               ))}
             </ul>
-
-            {/* GRAF */}
-            <div style={{ marginTop: 10 }}>
-              <BodyMeasurementChart label={label} dataPoints={list} />
-            </div>
-
-            {/* ADD BUTTON */}
-            <button
-              className="btn-pink"
-              style={{ marginTop: 6, fontSize: 12 }}
-              onClick={() => {
-                const value = prompt(`Ange nytt mått för ${label} (cm)`);
-                if (!value) return;
-
-                const date = new Date().toISOString().slice(0, 10);
-
-                onAddMeasurement(key, {
-                  id: crypto.randomUUID(),
-                  value: Number(value),
-                  date,
-                });
-              }}
-            >
-              + Lägg till {label}
-            </button>
           </div>
         );
       })}

@@ -15,9 +15,12 @@ export default function ProfileView({
     weight: profile.weight,
   });
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   const [newMeasurement, setNewMeasurement] = useState({
     key: "waist",
     value: "",
+    date: todayStr,
   });
 
   const measurementLabels = {
@@ -45,22 +48,67 @@ export default function ProfileView({
 
     const entry = {
       id: crypto.randomUUID(),
-      date: new Date().toISOString().slice(0, 10),
+      date: newMeasurement.date || todayStr,
       value: Number(newMeasurement.value),
     };
 
     onAddMeasurement(newMeasurement.key, entry);
 
-    setNewMeasurement({ ...newMeasurement, value: "" });
+    setNewMeasurement((prev) => ({
+      ...prev,
+      value: "",
+    }));
+  }
+
+  function MeasurementSparkline({ list }) {
+    if (!list || list.length < 2) return null;
+
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
+    const values = sorted.map((m) => m.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+
+    const width = 120;
+    const height = 36;
+
+    const points = sorted
+      .map((m, idx) => {
+        const x =
+          sorted.length === 1
+            ? width / 2
+            : (idx / (sorted.length - 1)) * width;
+        const y = height - ((m.value - min) / span) * height;
+        return `${x},${y}`;
+      })
+      .join(" ");
+
+    return (
+      <svg className="measure-sparkline" viewBox={`0 0 ${width} ${height}`}>
+        <polyline
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          points={points}
+        />
+      </svg>
+    );
+  }
+
+  function getSummary(list) {
+    if (!list || list.length === 0) return null;
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const diff = last.value - first.value;
+    return { first, last, diff };
   }
 
   return (
-    <div className="profile-container">
+    <div className="profile-page">
+      <h2 className="profile-header">👤 Din profil & kroppsmått</h2>
 
-      {/* HEADER */}
-      <h2 className="profile-header">👤 Din Profil</h2>
-
-      {/* PROFILE CARD */}
+      {/* GRUNDINFO */}
       <div className="profile-card">
         <h3 className="section-title">🧸 Grundinfo</h3>
 
@@ -95,7 +143,9 @@ export default function ProfileView({
             <input
               type="number"
               value={form.height}
-              onChange={(e) => setForm({ ...form, height: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, height: e.target.value })
+              }
             />
           </div>
 
@@ -104,30 +154,36 @@ export default function ProfileView({
             <input
               type="number"
               value={form.weight}
-              onChange={(e) => setForm({ ...form, weight: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, weight: e.target.value })
+              }
             />
           </div>
         </div>
 
-        <button className="save-btn" onClick={handleSaveProfile}>
+        <button className="btn-save" onClick={handleSaveProfile}>
           💾 Spara profil
         </button>
       </div>
 
-      {/* MEASUREMENTS */}
+      {/* KROPPSMÅTT */}
       <div className="profile-card">
-        <h3 className="section-title">📏 Kroppsmått</h3>
+        <h3 className="section-title">📏 Kroppsmått & utveckling</h3>
 
-        <div className="measure-input">
+        {/* Lägg till nytt mått */}
+        <div className="measurement-add">
           <select
             value={newMeasurement.key}
             onChange={(e) =>
-              setNewMeasurement({ ...newMeasurement, key: e.target.value })
+              setNewMeasurement((prev) => ({
+                ...prev,
+                key: e.target.value,
+              }))
             }
           >
-            {Object.keys(measurementLabels).map((k) => (
-              <option key={k} value={k}>
-                {measurementLabels[k]}
+            {Object.entries(measurementLabels).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
               </option>
             ))}
           </select>
@@ -137,39 +193,86 @@ export default function ProfileView({
             placeholder="cm"
             value={newMeasurement.value}
             onChange={(e) =>
-              setNewMeasurement({ ...newMeasurement, value: e.target.value })
+              setNewMeasurement((prev) => ({
+                ...prev,
+                value: e.target.value,
+              }))
             }
           />
 
-          <button className="add-btn" onClick={handleAddMeasurement}>
+          <input
+            type="date"
+            value={newMeasurement.date}
+            onChange={(e) =>
+              setNewMeasurement((prev) => ({
+                ...prev,
+                date: e.target.value,
+              }))
+            }
+          />
+
+          <button className="btn-add" onClick={handleAddMeasurement}>
             ➕
           </button>
         </div>
 
-        {/* LISTA FÖR VARJE KROPPSMÅTT */}
-        {Object.keys(bodyStats).map((key) => (
-          <div key={key} className="measurement-section">
-            <h4 className="measurement-title">{measurementLabels[key]}</h4>
+        {/* Lista + grafer */}
+        {Object.entries(bodyStats).map(([key, list]) => {
+          const summary = getSummary(list);
 
-            {bodyStats[key].length === 0 && (
-              <p className="empty-text">Inga mått ännu</p>
-            )}
-
-            {bodyStats[key].map((m) => (
-              <div key={m.id} className="measurement-row">
+          return (
+            <div key={key} className="measure-block">
+              <div className="measure-header-row">
                 <div>
-                  {m.date} – <strong>{m.value} cm</strong>
+                  <h4 className="measure-title">
+                    {measurementLabels[key]}
+                  </h4>
+                  {summary ? (
+                    <div className="measure-meta">
+                      Senast: <strong>{summary.last.value} cm</strong> (
+                      {summary.last.date}) • Förändring:{" "}
+                      <strong>
+                        {summary.diff > 0 ? "+" : ""}
+                        {summary.diff.toFixed(1)} cm
+                      </strong>
+                    </div>
+                  ) : (
+                    <div className="measure-meta">
+                      Inga värden ännu – lägg till första måttet ✨
+                    </div>
+                  )}
                 </div>
-                <button
-                  className="delete-btn"
-                  onClick={() => onDeleteMeasurement(key, m.id)}
-                >
-                  ✖
-                </button>
+
+                <MeasurementSparkline list={list} />
               </div>
-            ))}
-          </div>
-        ))}
+
+              {list.length === 0 && (
+                <p className="empty-text">Inga registrerade värden.</p>
+              )}
+
+              {list.length > 0 && (
+                <div className="measure-list">
+                  {list
+                    .slice()
+                    .sort((a, b) => b.date.localeCompare(a.date))
+                    .map((m) => (
+                      <div key={m.id} className="measure-item">
+                        <span>
+                          {m.date}: <strong>{m.value} cm</strong>
+                        </span>
+                        <button
+                          className="delete-btn"
+                          onClick={() => onDeleteMeasurement(key, m.id)}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

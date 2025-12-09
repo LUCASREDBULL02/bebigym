@@ -1,467 +1,995 @@
+// src/components/LiftTools.jsx
 import React, { useState, useMemo } from "react";
-import { EXERCISES } from "../data/exercises";
-import { Line } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import {
-  Chart as ChartJS,
-  LineElement,
+  Chart,
   CategoryScale,
   LinearScale,
   PointElement,
+  LineElement,
+  BarElement,
   Tooltip,
   Legend,
 } from "chart.js";
+import { EXERCISES } from "../data/exercises";
 
-ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
+Chart.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Tooltip,
+  Legend
+);
 
-// --------- HELPERS ---------
+const ACCENT = "#ec4899"; // rosa
 
+// 1RM-formler
+function calcFormulas1RM(weight, reps) {
+  if (!weight || !reps || reps <= 0) return null;
+  const w = Number(weight);
+  const r = Number(reps);
+
+  const safe = (fn) => {
+    try {
+      const v = fn(w, r);
+      if (!isFinite(v)) return null;
+      return Math.round(v);
+    } catch {
+      return null;
+    }
+  };
+
+  return {
+    epley: safe((w, r) => w * (1 + r / 30)),
+    brzycki: safe((w, r) => (w * 36) / (37 - r)),
+    lander: safe((w, r) => w / (1.013 - 0.0267123 * r)),
+    lombardi: safe((w, r) => w * Math.pow(r, 0.10)),
+    mayhew: safe(
+      (w, r) => (w * 100) / (52.2 + 41.9 * Math.exp(-0.055 * r))
+    ),
+    oconnor: safe((w, r) => w * (1 + 0.025 * r)),
+    wathan: safe(
+      (w, r) => (w * 100) / (48.8 + 53.8 * Math.exp(-0.075 * r))
+    ),
+  };
+}
+
+// Hämta namn på övning
+function getExerciseName(id) {
+  const ex = EXERCISES.find((e) => e.id === id);
+  return ex ? ex.name : id;
+}
+
+// Grupp per vecka (YYYY-WW)
+function getWeekKey(dateStr) {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "okänd";
+  const year = d.getFullYear();
+  const firstJan = new Date(year, 0, 1);
+  const days = Math.floor((d - firstJan) / (1000 * 60 * 60 * 24));
+  const week = Math.floor(days / 7) + 1;
+  return `${year}-v${week}`;
+}
+
+// 1RM (Epley)
 function calc1RM(weight, reps) {
   if (!weight || !reps) return 0;
   return Math.round(weight * (1 + reps / 30));
 }
 
-// 7 famous 1RM formulas
-function estimateAll(weight, reps) {
-  return {
-    Epley: Math.round(weight * (1 + reps / 30)),
-    Brzycki: Math.round(weight * (36 / (37 - reps))),
-    Lander: Math.round((100 * weight) / (101.3 - 2.67123 * reps)),
-    Lombardi: Math.round(weight * reps ** 0.1),
-    Mayhew: Math.round(
-      (100 * weight) / (52.2 + 41.9 * Math.exp(-0.055 * reps))
-    ),
-    OConnor: Math.round(weight * (1 + reps / 40)),
-    Wathan: Math.round(
-      (100 * weight) / (48.8 + 53.8 * Math.exp(-0.075 * reps))
-    ),
-  };
-}
+export default function LiftTools({ logs, bodyStats, onAddManual }) {
+  const [tab, setTab] = useState("rm"); // "rm" | "volume" | "body"
+  const [rmExerciseId, setRmExerciseId] = useState("bench");
+  const [rmWeight, setRmWeight] = useState("");
+  const [rmReps, setRmReps] = useState("");
+  const [rmPercentBase, setRmPercentBase] = useState("");
+  const [rmPercent, setRmPercent] = useState("65");
 
-// Maps EXERCISES → MUSCLE groups for volume tracker
-const MUSCLE_MAP = {
-  chest: ["bench", "inclinebench", "declinebench", "dumbbellpress", "cablefly", "pushups"],
-  back: ["row", "latpulldown", "tbarrow", "pendlayrow", "meadowsrow", "sealrow"],
-  glutes: ["hipthrust", "glutebridge", "frogpump", "bulgarian", "sumosquat"],
-  legs: ["squat", "legpress", "frontsquat", "lunges", "legextension", "legcurl"],
-  shoulders: ["ohp", "laterals", "rear-delt-fly", "arnoldpress"],
-  arms: ["bicepcurl", "hammercurl", "triceppushdown", "skullcrusher"],
-  core: ["plank", "cablecrunch", "hanginglegraise", "abwheel"],
-};
-
-function getISOWeek(dateStr) {
-  const date = new Date(dateStr);
-  const tmp = new Date(date.getTime());
-  tmp.setHours(0, 0, 0, 0);
-  tmp.setDate(tmp.getDate() + 4 - (tmp.getDay() || 7));
-  const yearStart = new Date(tmp.getFullYear(), 0, 1);
-  return Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
-}
-
-function getVolumeColor(sets) {
-  if (sets === 0) return "rgba(30,64,175,0.8)"; // blå – ingen volym
-  if (sets < 8) return "rgba(239,68,68,0.6)"; // lite – röd
-  if (sets <= 18) return "rgba(34,197,94,0.6)"; // sweet spot – grön
-  return "rgba(234,179,8,0.7)"; // väldigt mycket – gul
-}
-
-export default function LiftTools({ logs, onAddManual, bodyStats }) {
-  const [tab, setTab] = useState("manual");
-
-  // ----- TAB 1: MANUELL LOGG -----
-  const [manual, setManual] = useState({
-    exerciseId: "bench",
-    weight: "",
-    reps: "",
-    date: new Date().toISOString().slice(0, 10),
-  });
-
-  function saveManual() {
-    if (!manual.weight || !manual.reps) {
-      alert("Fyll i vikt & reps 💖");
-      return;
-    }
-
-    const entry = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36),
-      exerciseId: manual.exerciseId,
-      weight: Number(manual.weight),
-      reps: Number(manual.reps),
-      date: manual.date,
-    };
-
-    onAddManual(entry);
-    setManual((prev) => ({ ...prev, weight: "", reps: "" }));
-  }
-
-  // ----- TAB 2: 1RM & % -----
-  const [oneRmInput, setOneRmInput] = useState("");
-  const [percent, setPercent] = useState("");
-  const percentCalc =
-    oneRmInput && percent ? Math.round((oneRmInput * percent) / 100) : "";
-
-  // ----- TAB 3: VOLUME TRACKER -----
-  const volume = useMemo(() => {
-    const weekly = {};
-    Object.keys(MUSCLE_MAP).forEach((m) => (weekly[m] = 0));
-
-    if (!logs || !logs.length) return weekly;
-
-    const currentWeek = getISOWeek(new Date());
-    logs.forEach((l) => {
-      const w = getISOWeek(l.date);
-      if (w !== currentWeek) return;
-
-      Object.entries(MUSCLE_MAP).forEach(([mId, exList]) => {
-        if (exList.includes(l.exerciseId)) {
-          weekly[mId] += 1;
-        }
-      });
-    });
-
-    return weekly;
-  }, [logs]);
-
-  const totalWeeklySets = useMemo(
-    () => Object.values(volume).reduce((s, v) => s + v, 0),
-    [volume]
+  const [manualExerciseId, setManualExerciseId] = useState("bench");
+  const [manualWeight, setManualWeight] = useState("");
+  const [manualReps, setManualReps] = useState("");
+  const [manualDate, setManualDate] = useState(
+    new Date().toISOString().slice(0, 10)
   );
 
-  const mostTrained = useMemo(() => {
-    let best = null;
-    let bestVal = -1;
-    Object.entries(volume).forEach(([m, sets]) => {
-      if (sets > bestVal) {
-        bestVal = sets;
-        best = m;
-      }
-    });
-    return best && bestVal > 0 ? { muscle: best, sets: bestVal } : null;
-  }, [volume]);
+  const [volumeExerciseId, setVolumeExerciseId] = useState("bench");
+  const [bodyKey, setBodyKey] = useState("waist");
 
-  // ----- TAB 4: 1RM ESTIMATORS -----
-  const [estWeight, setEstWeight] = useState("");
-  const [estReps, setEstReps] = useState("");
-  const estimates =
-    estWeight && estReps ? estimateAll(Number(estWeight), Number(estReps)) : null;
+  const todayStr = new Date().toISOString().slice(0, 10);
 
-  // ----- TAB 5: GRAFER -----
-  const [showStrengthCharts, setShowStrengthCharts] = useState(true);
-  const [showBodyCharts, setShowBodyCharts] = useState(true);
+  // Unika övningar i loggarna (fallback till EXERCISES om tomt)
+  const usedExerciseIds = useMemo(() => {
+    const set = new Set();
+    (logs || []).forEach((l) => l.exerciseId && set.add(l.exerciseId));
+    if (set.size === 0) {
+      EXERCISES.forEach((e) => set.add(e.id));
+    }
+    return Array.from(set);
+  }, [logs]);
 
-  function getExerciseChart(exId) {
-    const data = (logs || [])
-      .filter((l) => l.exerciseId === exId)
-      .map((l) => ({
-        date: l.date,
-        rm: calc1RM(l.weight, l.reps),
-      }))
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  // 1RM-formler
+  const rmResults = useMemo(
+    () => calcFormulas1RM(Number(rmWeight), Number(rmReps)),
+    [rmWeight, rmReps]
+  );
 
-    return {
-      labels: data.map((d) => d.date),
-      datasets: [
-        {
-          label: "1RM utveckling",
-          data: data.map((d) => d.rm),
-          borderColor: "#ec4899",
-          borderWidth: 3,
-          pointRadius: 4,
-        },
-      ],
-    };
-  }
+  const rmPercentResult = useMemo(() => {
+    const base = Number(rmPercentBase);
+    const p = Number(rmPercent);
+    if (!base || !p) return "";
+    return Math.round((base * p) / 100);
+  }, [rmPercentBase, rmPercent]);
 
-  function getBodyChart(key, label, color) {
-    const arr = bodyStats?.[key] || [];
-    const data = [...arr].sort(
-      (a, b) => new Date(a.date) - new Date(b.date)
+  // Volym per vecka + 1RM-historik
+  const { volumeData, strengthData } = useMemo(() => {
+    const filtered = (logs || []).filter(
+      (l) => l.exerciseId === volumeExerciseId && l.weight && l.reps
     );
 
+    const byWeek = {};
+    const byDate = {};
+
+    filtered.forEach((l) => {
+      const vol = l.weight * l.reps;
+      const wk = getWeekKey(l.date || todayStr);
+      byWeek[wk] = (byWeek[wk] || 0) + vol;
+
+      const d = l.date || todayStr;
+      const oneRm = calc1RM(l.weight, l.reps);
+      if (!byDate[d] || oneRm > byDate[d]) {
+        byDate[d] = oneRm;
+      }
+    });
+
+    const weekLabels = Object.keys(byWeek).sort();
+    const weekValues = weekLabels.map((k) => byWeek[k]);
+
+    const dateLabels = Object.keys(byDate).sort();
+    const dateValues = dateLabels.map((d) => byDate[d]);
+
     return {
-      labels: data.map((d) => d.date),
-      datasets: [
-        {
-          label,
-          data: data.map((d) => d.value),
-          borderColor: color,
-          borderWidth: 3,
-          pointRadius: 4,
-        },
-      ],
+      volumeData: {
+        labels: weekLabels,
+        datasets: [
+          {
+            label: "Volym per vecka (kg x reps)",
+            data: weekValues,
+            backgroundColor: "rgba(236, 72, 153, 0.6)",
+            borderRadius: 6,
+          },
+        ],
+      },
+      strengthData: {
+        labels: dateLabels,
+        datasets: [
+          {
+            label: "Bästa 1RM per datum (kg)",
+            data: dateValues,
+            borderColor: ACCENT,
+            backgroundColor: "rgba(236, 72, 153, 0.15)",
+            tension: 0.3,
+            pointRadius: 3,
+          },
+        ],
+      },
     };
+  }, [logs, volumeExerciseId, todayStr]);
+
+  // Kroppsmått för vald nyckel
+  const measurementSeries = useMemo(() => {
+    const arr = (bodyStats && bodyStats[bodyKey]) || [];
+    const sorted = [...arr].sort((a, b) =>
+      (a.date || "").localeCompare(b.date || "")
+    );
+    const labels = sorted.map((m) => m.date || "");
+    const values = sorted.map((m) => m.value || 0);
+
+    return {
+      labels,
+      data: {
+        labels,
+        datasets: [
+          {
+            label: `Utveckling (${bodyKey})`,
+            data: values,
+            borderColor: ACCENT,
+            backgroundColor: "rgba(236, 72, 153, 0.15)",
+            tension: 0.3,
+            pointRadius: 3,
+          },
+        ],
+      },
+      raw: sorted,
+    };
+  }, [bodyStats, bodyKey]);
+
+  function handleAddManual() {
+    if (!manualExerciseId || !manualWeight || !manualReps) return;
+
+    const entry = {
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : Math.random().toString(36),
+      exerciseId: manualExerciseId,
+      weight: Number(manualWeight),
+      reps: Number(manualReps),
+      date: manualDate || todayStr,
+    };
+
+    onAddManual && onAddManual(entry);
+
+    setManualWeight("");
+    setManualReps("");
   }
 
   return (
-    <div>
-      {/* TABS */}
-      <div className="lift-tabs">
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      {/* Tabs */}
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          overflowX: "auto",
+          paddingBottom: 4,
+        }}
+      >
         <button
-          className={tab === "manual" ? "lift-tab active" : "lift-tab"}
-          onClick={() => setTab("manual")}
+          onClick={() => setTab("rm")}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 999,
+            border: `1px solid ${
+              tab === "rm" ? ACCENT : "rgba(148,163,184,0.6)"
+            }`,
+            background:
+              tab === "rm" ? ACCENT : "rgba(15,23,42,0.9)",
+            color: tab === "rm" ? "#0b1120" : "#e5e7eb",
+            fontSize: 12,
+            whiteSpace: "nowrap",
+          }}
         >
-          📝 Manuell logg
+          🧠 1RM & %
         </button>
         <button
-          className={tab === "1rm" ? "lift-tab active" : "lift-tab"}
-          onClick={() => setTab("1rm")}
-        >
-          🧮 1RM & %
-        </button>
-        <button
-          className={tab === "volume" ? "lift-tab active" : "lift-tab"}
           onClick={() => setTab("volume")}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 999,
+            border: `1px solid ${
+              tab === "volume" ? ACCENT : "rgba(148,163,184,0.6)"
+            }`,
+            background:
+              tab === "volume" ? ACCENT : "rgba(15,23,42,0.9)",
+            color: tab === "volume" ? "#0b1120" : "#e5e7eb",
+            fontSize: 12,
+            whiteSpace: "nowrap",
+          }}
         >
-          📊 Volym / vecka
+          📊 Volym & styrka
         </button>
         <button
-          className={tab === "est" ? "lift-tab active" : "lift-tab"}
-          onClick={() => setTab("est")}
+          onClick={() => setTab("body")}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 999,
+            border: `1px solid ${
+              tab === "body" ? ACCENT : "rgba(148,163,184,0.6)"
+            }`,
+            background:
+              tab === "body" ? ACCENT : "rgba(15,23,42,0.9)",
+            color: tab === "body" ? "#0b1120" : "#e5e7eb",
+            fontSize: 12,
+            whiteSpace: "nowrap",
+          }}
         >
-          🔥 1RM Estimators
-        </button>
-        <button
-          className={tab === "charts" ? "lift-tab active" : "lift-tab"}
-          onClick={() => setTab("charts")}
-        >
-          📈 Grafer
+          📐 Kroppsmått
         </button>
       </div>
 
-      <div className="lift-content">
-        {/* TAB 1: MANUELL */}
-        {tab === "manual" && (
-          <div className="fade">
-            <label className="small">Övning</label>
-            <select
-              className="input"
-              value={manual.exerciseId}
-              onChange={(e) =>
-                setManual({ ...manual, exerciseId: e.target.value })
-              }
+      {/* === TAB 1: 1RM & % === */}
+      {tab === "rm" && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: 12,
+          }}
+        >
+          {/* 1RM-kalkylator */}
+          <div className="card" style={{ padding: 12 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                marginBottom: 6,
+              }}
             >
-              {EXERCISES.map((ex) => (
-                <option key={ex.id} value={ex.id}>
-                  {ex.name}
-                </option>
-              ))}
-            </select>
+              1RM-kalkylator (7 formler)
+            </div>
+            <p className="small" style={{ marginBottom: 8 }}>
+              Välj övning, skriv in vikt & reps – så får du ett spann på ditt
+              1RM med flera kända formler.
+            </p>
 
-            <label className="small">Vikt (kg)</label>
-            <input
-              className="input"
-              type="number"
-              value={manual.weight}
-              onChange={(e) =>
-                setManual({ ...manual, weight: e.target.value })
-              }
-            />
-
-            <label className="small">Reps</label>
-            <input
-              className="input"
-              type="number"
-              value={manual.reps}
-              onChange={(e) =>
-                setManual({ ...manual, reps: e.target.value })
-              }
-            />
-
-            <label className="small">Datum</label>
-            <input
-              className="input"
-              type="date"
-              value={manual.date}
-              onChange={(e) =>
-                setManual({ ...manual, date: e.target.value })
-              }
-            />
-
-            <button
-              className="btn-pink"
-              style={{ marginTop: 15 }}
-              onClick={saveManual}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gap: 8,
+                marginBottom: 10,
+              }}
             >
-              ➕ Spara lyft
-            </button>
-          </div>
-        )}
-
-        {/* TAB 2: 1RM & % */}
-        {tab === "1rm" && (
-          <div className="fade">
-            <label className="small">Ditt 1RM (kg)</label>
-            <input
-              className="input"
-              type="number"
-              value={oneRmInput}
-              onChange={(e) => setOneRmInput(Number(e.target.value))}
-            />
-
-            <label className="small">Procent (%)</label>
-            <input
-              className="input"
-              type="number"
-              value={percent}
-              onChange={(e) => setPercent(Number(e.target.value))}
-            />
-
-            <div className="lift-result">
-              {percentCalc !== "" ? (
-                <>
-                  <div className="result-number">{percentCalc} kg</div>
-                  <div className="small">
-                    {percent}% av {oneRmInput} kg
-                  </div>
-                </>
-              ) : (
-                <div className="small" style={{ opacity: 0.5 }}>
-                  Fyll i värden ↑
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: VOLUME */}
-        {tab === "volume" && (
-          <div className="fade">
-            <div className="card small" style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>
-                Weekly Report 📬
-              </div>
-              <div className="small">
-                Totalt denna vecka: <strong>{totalWeeklySets}</strong> set.
-              </div>
-              {mostTrained ? (
-                <div className="small">
-                  Mest tränade muskel:{" "}
-                  <strong style={{ textTransform: "capitalize" }}>
-                    {mostTrained.muscle}
-                  </strong>{" "}
-                  ({mostTrained.sets} set)
-                </div>
-              ) : (
-                <div className="small">
-                  Ingen volym registrerad ännu denna vecka.
-                </div>
-              )}
-            </div>
-
-            {Object.entries(volume).map(([m, sets]) => (
-              <div
-                key={m}
-                className="card small"
+              <select
+                value={rmExerciseId}
+                onChange={(e) => setRmExerciseId(e.target.value)}
                 style={{
-                  marginBottom: 8,
-                  background: getVolumeColor(sets),
-                  border: "1px solid rgba(15,23,42,0.6)",
+                  padding: "6px 8px",
+                  borderRadius: 8,
+                  border:
+                    "1px solid rgba(148,163,184,0.6)",
+                  background: "rgba(15,23,42,0.9)",
+                  color: "#e5e7eb",
+                  fontSize: 12,
                 }}
               >
-                <strong style={{ textTransform: "capitalize" }}>{m}</strong>:{" "}
-                {sets} set denna veckan
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* TAB 4: 1RM ESTIMATORS */}
-        {tab === "est" && (
-          <div className="fade">
-            <label className="small">Vikt (kg)</label>
-            <input
-              className="input"
-              type="number"
-              value={estWeight}
-              onChange={(e) => setEstWeight(Number(e.target.value))}
-            />
-
-            <label className="small">Reps</label>
-            <input
-              className="input"
-              type="number"
-              value={estReps}
-              onChange={(e) => setEstReps(Number(e.target.value))}
-            />
-
-            {estimates && (
-              <div style={{ marginTop: 12 }}>
-                {Object.entries(estimates).map(([name, val]) => (
-                  <div
-                    key={name}
-                    className="card small"
-                    style={{ marginBottom: 6 }}
-                  >
-                    <strong>{name}</strong>: {val} kg
-                  </div>
+                {usedExerciseIds.map((id) => (
+                  <option key={id} value={id}>
+                    {getExerciseName(id)}
+                  </option>
                 ))}
+              </select>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0,1fr))",
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <label
+                    className="small"
+                    style={{ display: "block", marginBottom: 2 }}
+                  >
+                    Vikt (kg)
+                  </label>
+                  <input
+                    type="number"
+                    value={rmWeight}
+                    onChange={(e) => setRmWeight(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      border:
+                        "1px solid rgba(148,163,184,0.6)",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      fontSize: 12,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    className="small"
+                    style={{ display: "block", marginBottom: 2 }}
+                  >
+                    Reps
+                  </label>
+                  <input
+                    type="number"
+                    value={rmReps}
+                    onChange={(e) => setRmReps(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      border:
+                        "1px solid rgba(148,163,184,0.6)",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      fontSize: 12,
+                    }}
+                  />
+                </div>
               </div>
+            </div>
+
+            {rmResults ? (
+              <div
+                style={{
+                  overflowX: "auto",
+                  marginTop: 6,
+                }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 11,
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        borderBottom:
+                          "1px solid rgba(55,65,81,0.8)",
+                      }}
+                    >
+                      <th
+                        style={{
+                          textAlign: "left",
+                          padding: "4px 2px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Formel
+                      </th>
+                      <th
+                        style={{
+                          textAlign: "right",
+                          padding: "4px 2px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        1RM (kg)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(rmResults).map(
+                      ([key, val]) => (
+                        <tr key={key}>
+                          <td
+                            style={{
+                              padding: "3px 2px",
+                              opacity: 0.9,
+                            }}
+                          >
+                            {key}
+                          </td>
+                          <td
+                            style={{
+                              padding: "3px 2px",
+                              textAlign: "right",
+                            }}
+                          >
+                            {val ? val : "—"}
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p
+                className="small"
+                style={{ marginTop: 6, opacity: 0.8 }}
+              >
+                Fyll i vikt & reps för att se 1RM-estimat.
+              </p>
             )}
           </div>
-        )}
 
-        {/* TAB 5: GRAFER */}
-        {tab === "charts" && (
-          <div
-            className="fade"
-            style={{ display: "flex", flexDirection: "column", gap: 16 }}
-          >
+          {/* 1RM% */}
+          <div className="card" style={{ padding: 12 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                marginBottom: 6,
+              }}
+            >
+              % av 1RM kalkylator
+            </div>
+            <p className="small" style={{ marginBottom: 8 }}>
+              Perfekt när du fått fram ditt 1RM och vill veta t.ex. vad 65% är.
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0,1fr))",
+                gap: 8,
+                alignItems: "flex-end",
+              }}
+            >
+              <div>
+                <label
+                  className="small"
+                  style={{ display: "block", marginBottom: 2 }}
+                >
+                  1RM (kg)
+                </label>
+                <input
+                  type="number"
+                  value={rmPercentBase}
+                  onChange={(e) =>
+                    setRmPercentBase(e.target.value)
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    borderRadius: 8,
+                    border:
+                      "1px solid rgba(148,163,184,0.6)",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                    fontSize: 12,
+                  }}
+                />
+              </div>
+              <div>
+                <label
+                  className="small"
+                  style={{ display: "block", marginBottom: 2 }}
+                >
+                  Procent (%)
+                </label>
+                <input
+                  type="number"
+                  value={rmPercent}
+                  onChange={(e) =>
+                    setRmPercent(e.target.value)
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    borderRadius: 8,
+                    border:
+                      "1px solid rgba(148,163,184,0.6)",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                    fontSize: 12,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 10,
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              {rmPercentBase && rmPercent ? (
+                <>
+                  {rmPercent}% av {rmPercentBase} kg ={" "}
+                  <span style={{ color: ACCENT }}>
+                    {rmPercentResult} kg
+                  </span>
+                </>
+              ) : (
+                <span className="small">
+                  Fyll i 1RM + procent för att räkna ut.
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Lägg till tidigare set */}
+          <div className="card" style={{ padding: 12 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                marginBottom: 6,
+              }}
+            >
+              Lägg till tidigare set 📆
+            </div>
+            <p className="small" style={{ marginBottom: 8 }}>
+              Om du vill lägga in tidigare lyft (innan appen fanns), fyll i här
+              så hamnar det i loggen.
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gap: 8,
+              }}
+            >
+              <select
+                value={manualExerciseId}
+                onChange={(e) =>
+                  setManualExerciseId(e.target.value)
+                }
+                style={{
+                  padding: "6px 8px",
+                  borderRadius: 8,
+                  border:
+                    "1px solid rgba(148,163,184,0.6)",
+                  background: "rgba(15,23,42,0.9)",
+                  color: "#e5e7eb",
+                  fontSize: 12,
+                }}
+              >
+                {usedExerciseIds.map((id) => (
+                  <option key={id} value={id}>
+                    {getExerciseName(id)}
+                  </option>
+                ))}
+              </select>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0,1fr))",
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <label
+                    className="small"
+                    style={{ display: "block", marginBottom: 2 }}
+                  >
+                    Vikt (kg)
+                  </label>
+                  <input
+                    type="number"
+                    value={manualWeight}
+                    onChange={(e) =>
+                      setManualWeight(e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      border:
+                        "1px solid rgba(148,163,184,0.6)",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      fontSize: 12,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    className="small"
+                    style={{ display: "block", marginBottom: 2 }}
+                  >
+                    Reps
+                  </label>
+                  <input
+                    type="number"
+                    value={manualReps}
+                    onChange={(e) =>
+                      setManualReps(e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      border:
+                        "1px solid rgba(148,163,184,0.6)",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      fontSize: 12,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    className="small"
+                    style={{ display: "block", marginBottom: 2 }}
+                  >
+                    Datum
+                  </label>
+                  <input
+                    type="date"
+                    value={manualDate}
+                    onChange={(e) =>
+                      setManualDate(e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      border:
+                        "1px solid rgba(148,163,184,0.6)",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      fontSize: 12,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleAddManual}
+                style={{
+                  marginTop: 6,
+                  alignSelf: "flex-start",
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: ACCENT,
+                  color: "#0b1120",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                + Lägg till i loggen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === TAB 2: VOLYM & STYRKA === */}
+      {tab === "volume" && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: 12,
+          }}
+        >
+          <div className="card" style={{ padding: 12 }}>
             <div
               style={{
                 display: "flex",
+                justifyContent: "space-between",
                 gap: 8,
-                marginBottom: 4,
-                flexWrap: "wrap",
+                alignItems: "center",
+                marginBottom: 6,
               }}
             >
-              <button
-                className="btn"
-                style={{ fontSize: 11, padding: "4px 8px" }}
-                onClick={() => setShowStrengthCharts((v) => !v)}
+              <div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Volym per vecka
+                </div>
+                <div className="small">
+                  Total volym (kg × reps) per vecka för vald övning.
+                </div>
+              </div>
+              <select
+                value={volumeExerciseId}
+                onChange={(e) =>
+                  setVolumeExerciseId(e.target.value)
+                }
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: 999,
+                  border:
+                    "1px solid rgba(148,163,184,0.6)",
+                  background: "rgba(15,23,42,0.9)",
+                  color: "#e5e7eb",
+                  fontSize: 11,
+                }}
               >
-                {showStrengthCharts ? "Dölj styrkegrafer" : "Visa styrkegrafer"}
-              </button>
-              <button
-                className="btn"
-                style={{ fontSize: 11, padding: "4px 8px" }}
-                onClick={() => setShowBodyCharts((v) => !v)}
-              >
-                {showBodyCharts ? "Dölj kroppsmått" : "Visa kroppsmått"}
-              </button>
+                {usedExerciseIds.map((id) => (
+                  <option key={id} value={id}>
+                    {getExerciseName(id)}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {showStrengthCharts && (
-              <>
-                <h3>📈 Styrkeutveckling per övning</h3>
-                {EXERCISES.slice(0, 5).map((ex) => (
-                  <div key={ex.id} className="card">
-                    <strong>{ex.name}</strong>
-                    <Line data={getExerciseChart(ex.id)} />
-                  </div>
-                ))}
-              </>
-            )}
-
-            {showBodyCharts && (
-              <>
-                <h3>📏 Kroppsmått</h3>
-                {[
-                  ["waist", "Midja", "#22d3ee"],
-                  ["hips", "Höft", "#a78bfa"],
-                  ["thigh", "Lår", "#f472b6"],
-                  ["glutes", "Rumpa", "#fb923c"],
-                  ["chest", "Bröst", "#34d399"],
-                  ["arm", "Arm", "#facc15"],
-                ].map(([key, label, color]) => (
-                  <div key={key} className="card">
-                    <strong>{label}</strong>
-                    <Line data={getBodyChart(key, label, color)} />
-                  </div>
-                ))}
-              </>
+            {volumeData.labels.length ? (
+              <div style={{ width: "100%", height: 220 }}>
+                <Bar
+                  data={volumeData}
+                  options={{
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                    },
+                    scales: {
+                      x: {
+                        ticks: { color: "#9ca3af", font: { size: 10 } },
+                        grid: { display: false },
+                      },
+                      y: {
+                        ticks: { color: "#9ca3af", font: { size: 10 } },
+                        grid: {
+                          color: "rgba(31,41,55,0.8)",
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
+            ) : (
+              <p className="small">
+                Inga loggar ännu för den här övningen.
+              </p>
             )}
           </div>
-        )}
-      </div>
+
+          <div className="card" style={{ padding: 12 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                marginBottom: 6,
+              }}
+            >
+              Styrkeutveckling (1RM över tid)
+            </div>
+            <p className="small" style={{ marginBottom: 8 }}>
+              Visar bästa uppskattade 1RM per datum för vald övning.
+            </p>
+            {strengthData.labels.length ? (
+              <div style={{ width: "100%", height: 220 }}>
+                <Line
+                  data={strengthData}
+                  options={{
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                    },
+                    scales: {
+                      x: {
+                        ticks: { color: "#9ca3af", font: { size: 10 } },
+                        grid: { display: false },
+                      },
+                      y: {
+                        ticks: { color: "#9ca3af", font: { size: 10 } },
+                        grid: {
+                          color: "rgba(31,41,55,0.8)",
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
+            ) : (
+              <p className="small">
+                Logga några pass först för att se grafen.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* === TAB 3: KROPPSMÅTT === */}
+      {tab === "body" && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: 12,
+          }}
+        >
+          <div className="card" style={{ padding: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 8,
+                alignItems: "center",
+                marginBottom: 6,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Kroppsmått – graf
+                </div>
+                <div className="small">
+                  Välj område så ser du utvecklingen som kurva.
+                </div>
+              </div>
+              <select
+                value={bodyKey}
+                onChange={(e) => setBodyKey(e.target.value)}
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: 999,
+                  border:
+                    "1px solid rgba(148,163,184,0.6)",
+                  background: "rgba(15,23,42,0.9)",
+                  color: "#e5e7eb",
+                  fontSize: 11,
+                }}
+              >
+                <option value="waist">Midja</option>
+                <option value="hips">Höft</option>
+                <option value="thigh">Lår</option>
+                <option value="glutes">Glutes</option>
+                <option value="chest">Bröst</option>
+                <option value="arm">Arm</option>
+              </select>
+            </div>
+
+            {measurementSeries.labels.length ? (
+              <div style={{ width: "100%", height: 220 }}>
+                <Line
+                  data={measurementSeries.data}
+                  options={{
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                    },
+                    scales: {
+                      x: {
+                        ticks: { color: "#9ca3af", font: { size: 10 } },
+                        grid: { display: false },
+                      },
+                      y: {
+                        ticks: { color: "#9ca3af", font: { size: 10 } },
+                        grid: {
+                          color: "rgba(31,41,55,0.8)",
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
+            ) : (
+              <p className="small">
+                Inga värden ännu för detta mått. Lägg in kroppsmått i
+                Profil-sidan.
+              </p>
+            )}
+          </div>
+
+          <div className="card" style={{ padding: 12 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                marginBottom: 6,
+              }}
+            >
+              Lista – {bodyKey}
+            </div>
+            {measurementSeries.raw.length ? (
+              <ul
+                style={{
+                  listStyle: "none",
+                  paddingLeft: 0,
+                  margin: 0,
+                  fontSize: 12,
+                }}
+              >
+                {measurementSeries.raw.map((m) => (
+                  <li
+                    key={m.id || `${m.date}-${m.value}`}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "4px 0",
+                      borderBottom:
+                        "1px solid rgba(31,41,55,0.9)",
+                    }}
+                  >
+                    <span>{m.date}</span>
+                    <span>{m.value} cm</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="small">
+                När du lagt in några värden syns de här.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

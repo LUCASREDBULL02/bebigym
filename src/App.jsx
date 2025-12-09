@@ -20,6 +20,7 @@ import { PROGRAMS } from "./data/programs";
 import { initialBosses } from "./data/bosses";
 
 // ------------------ KONSTANTER ------------------
+
 const BATTLE_REWARDS = [
   {
     id: "r_50xp",
@@ -153,31 +154,242 @@ function computeMuscleStatsFromLogs(logs, profile) {
     }
   });
 
+  // Mappa 1RM => muskler
   Object.entries(best).forEach(([exId, oneRm]) => {
     const std = STRENGTH_STANDARDS[exId];
     if (!std) return;
 
-    const advTarget = bw * std.coeff;
-    if (!advTarget) return;
+    const advancedTarget = bw * std.coeff;
+    if (!advancedTarget) return;
 
-    const ratio = oneRm / advTarget;
+    const ratio = oneRm / advancedTarget;
+
     std.muscles.forEach((mId) => {
+      if (!stats[mId]) return;
       stats[mId].score += ratio;
     });
   });
 
+  // Score → nivå + %
   Object.keys(stats).forEach((mId) => {
     const val = stats[mId].score;
+
     let level = "Beginner";
     if (val >= 0.55) level = "Novice";
     if (val >= 0.75) level = "Intermediate";
     if (val >= 1.0) level = "Advanced";
     if (val >= 1.25) level = "Elite";
-    const pct = Math.min(150, Math.round((val / 1.25) * 100));
-    stats[mId] = { score: val, levelKey: level, percent: pct };
+
+    const pct = Math.min(150, Math.max(0, Math.round((val / 1.25) * 100)));
+
+    stats[mId] = {
+      score: val,
+      levelKey: level,
+      percent: pct,
+    };
   });
 
   return stats;
+}
+
+// ---------- CYCLE TRACKER HJÄLPSFUNKTION ----------
+
+function getCycleInfoForDay(date, config) {
+  const length = Number(config.length) || 28;
+  const start = config.startDate ? new Date(config.startDate) : null;
+
+  if (!start || isNaN(start.getTime())) {
+    return {
+      dayInCycle: null,
+      phase: "Ingen start satt",
+      strengthNote: "Fyll i datum för senaste mens",
+      color: "rgba(148,163,184,0.25)",
+    };
+  }
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const diffDays = Math.floor((date - start) / msPerDay);
+  const dayInCycle = ((diffDays % length) + length) % length + 1;
+
+  let phase = "";
+  let strengthNote = "";
+  let color = "";
+
+  // Väldigt förenklad modell (du kan tweaka exakt gränser senare)
+  if (dayInCycle >= 1 && dayInCycle <= 4) {
+    phase = "Mens / Låg energi";
+    strengthNote = "Planera lättare pass, fokus teknik & rörlighet.";
+    color = "rgba(148,163,184,0.25)";
+  } else if (dayInCycle >= 5 && dayInCycle <= 11) {
+    phase = "Stigande styrka";
+    strengthNote = "Bra läge för tyngre sets & progression.";
+    color = "rgba(56,189,248,0.25)";
+  } else if (dayInCycle >= 12 && dayInCycle <= 17) {
+    phase = "Peak / Starkast";
+    strengthNote = "Bästa dagarna för PR, tunga hip thrust & böj.";
+    color = "rgba(244,114,182,0.25)";
+  } else if (dayInCycle >= 18 && dayInCycle <= 24) {
+    phase = "Stabil men lite svajig";
+    strengthNote = "Håll intensitet, men lyssna extra på kroppen.";
+    color = "rgba(129,140,248,0.25)";
+  } else {
+    phase = "PMS / Lugn fas";
+    strengthNote = "Perfekt för deload, pump-pass & feel-good-träning.";
+    color = "rgba(96,165,250,0.25)";
+  }
+
+  return { dayInCycle, phase, strengthNote, color };
+}
+
+// ---------- CYCLE VIEW KOMPONENT ----------
+
+function CycleView({ cycleConfig, setCycleConfig }) {
+  const length = Number(cycleConfig.length) || 28;
+  const baseDate = cycleConfig.startDate
+    ? new Date(cycleConfig.startDate)
+    : new Date();
+
+  const days = [];
+  for (let i = 0; i < length; i++) {
+    const d = new Date(baseDate);
+    d.setDate(d.getDate() + i);
+    const info = getCycleInfoForDay(d, cycleConfig);
+    days.push({ dateObj: d, info });
+  }
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0, marginBottom: 8 }}>Cykel & Styrka 🌸</h3>
+      <p className="small" style={{ marginBottom: 10 }}>
+        Här kan du se ungefär vilken fas du är i cykeln och hur du kan anpassa
+        träningen. Det är en förenklad modell, men ger en bra känsla för när
+        det är PR-läge och när det är deload-läge.
+      </p>
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+          <label className="small" style={{ display: "block", marginBottom: 4 }}>
+            Senaste mensens första dag
+          </label>
+          <input
+            type="date"
+            value={cycleConfig.startDate || ""}
+            onChange={(e) =>
+              setCycleConfig((prev) => ({
+                ...prev,
+                startDate: e.target.value || null,
+              }))
+            }
+            style={{
+              width: "100%",
+              padding: "6px 8px",
+              borderRadius: 8,
+              border: "1px solid rgba(148,163,184,0.7)",
+              background: "rgba(15,23,42,0.9)",
+              color: "#e5e7eb",
+              fontSize: 12,
+            }}
+          />
+        </div>
+
+        <div style={{ flex: "0 0 100px", minWidth: 0 }}>
+          <label className="small" style={{ display: "block", marginBottom: 4 }}>
+            Cykellängd (dagar)
+          </label>
+          <input
+            type="number"
+            min={21}
+            max={40}
+            value={cycleConfig.length}
+            onChange={(e) =>
+              setCycleConfig((prev) => ({
+                ...prev,
+                length: e.target.value || 28,
+              }))
+            }
+            style={{
+              width: "100%",
+              padding: "6px 8px",
+              borderRadius: 8,
+              border: "1px solid rgba(148,163,184,0.7)",
+              background: "rgba(15,23,42,0.9)",
+              color: "#e5e7eb",
+              fontSize: 12,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="small" style={{ marginBottom: 8, opacity: 0.9 }}>
+        Kalendern nedan visar en hel cykel framåt från vald startdag. Färgen
+        visar fas, och texten ger en hint om hur du kan planera passen.
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
+          marginTop: 6,
+        }}
+      >
+        {days.map(({ dateObj, info }, idx) => {
+          const dateStr = dateObj.toISOString().slice(0, 10);
+          return (
+            <div
+              key={idx}
+              style={{
+                flex: "1 0 calc(50% - 6px)",
+                minWidth: 0,
+                borderRadius: 10,
+                border: "1px solid rgba(148,163,184,0.4)",
+                background: info.color,
+                padding: "6px 8px",
+                fontSize: 11,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 2,
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{dateStr}</span>
+                {info.dayInCycle != null && (
+                  <span style={{ opacity: 0.9 }}>Dag {info.dayInCycle}</span>
+                )}
+              </div>
+              <div style={{ fontWeight: 500 }}>{info.phase}</div>
+              <div className="small" style={{ marginTop: 2 }}>
+                {info.strengthNote}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        className="small"
+        style={{
+          marginTop: 10,
+          paddingTop: 8,
+          borderTop: "1px dashed rgba(148,163,184,0.5)",
+        }}
+      >
+        Tips: Använd denna vy tillsammans med program & boss raid. Planera dina
+        tyngsta pass under “Peak / Starkast”-dagarna och lägg deload / pump
+        runt PMS och mens. 💗
+      </div>
+    </div>
+  );
 }
 
 // ------------------ HUVUDKOMPONENT ------------------
@@ -186,14 +398,17 @@ export default function App() {
   const [view, setView] = useState("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Loggar
+  // Loggar – persisteras
   const [logs, setLogs] = useState(() => {
     const saved = localStorage.getItem("bebi_logs");
     return saved ? JSON.parse(saved) : [];
   });
-  useEffect(() => localStorage.setItem("bebi_logs", JSON.stringify(logs)), [logs]);
 
-  // Profil
+  useEffect(() => {
+    localStorage.setItem("bebi_logs", JSON.stringify(logs));
+  }, [logs]);
+
+  // Profil – persisteras
   const [profile, setProfile] = useState(() => {
     const saved = localStorage.getItem("bebi_profile");
     return saved
@@ -207,9 +422,12 @@ export default function App() {
           avatar: "/avatar.png",
         };
   });
-  useEffect(() => localStorage.setItem("bebi_profile", JSON.stringify(profile)), [profile]);
 
-  // Kroppsmått
+  useEffect(() => {
+    localStorage.setItem("bebi_profile", JSON.stringify(profile));
+  }, [profile]);
+
+  // Kroppsmått – persisteras
   const [bodyStats, setBodyStats] = useState(() => {
     const saved = localStorage.getItem("bebi_bodyStats");
     return saved
@@ -223,7 +441,25 @@ export default function App() {
           arm: [],
         };
   });
-  useEffect(() => localStorage.setItem("bebi_bodyStats", JSON.stringify(bodyStats)), [bodyStats]);
+
+  useEffect(() => {
+    localStorage.setItem("bebi_bodyStats", JSON.stringify(bodyStats));
+  }, [bodyStats]);
+
+  // Cykelkonfiguration – persisteras
+  const [cycleConfig, setCycleConfig] = useState(() => {
+    const saved = localStorage.getItem("bebi_cycle");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          startDate: null,
+          length: 28,
+        };
+  });
+
+  useEffect(() => {
+    localStorage.setItem("bebi_cycle", JSON.stringify(cycleConfig));
+  }, [cycleConfig]);
 
   const [toast, setToast] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -234,28 +470,27 @@ export default function App() {
 
   const { mood, bumpMood } = useBebiMood();
 
-  function showToastMsg(t, s) {
-    setToast({ title: t, subtitle: s });
-    setTimeout(() => setToast(null), 2500);
+  function showToastMsg(title, subtitle) {
+    setToast({ title, subtitle });
+    setTimeout(() => setToast(null), 2600);
   }
 
-  // Recompute stats
+  // Recompute XP, BattlePass, Bossar, PRs från loggar
   const { xp, battleTier, bosses, prMap } = useMemo(
     () => recomputeFromLogs(logs, profile),
     [logs, profile.weight]
   );
 
+  // Muskelkarta + jämförelsedata
   const muscleStats = useMemo(
     () => computeMuscleStatsFromLogs(logs, profile),
     [logs, profile.weight]
   );
-
   const comparisonData = useMemo(
     () => buildComparisonChartData(muscleStats),
     [muscleStats]
   );
 
-  // Achievements
   const unlockedAchievements = useMemo(() => {
     const arr = [];
 
@@ -289,7 +524,7 @@ export default function App() {
       arr.push({
         id: "ach_glute_elite",
         title: "Glute Queen",
-        desc: "Elite på glutes.",
+        desc: "Elite på glutes – Glute Dragon darrar.",
         emoji: "🍑",
       });
 
@@ -306,12 +541,11 @@ export default function App() {
     const totalMax = bossesArray.reduce((s, b) => s + b.maxHP, 0);
     const totalCurrent = bossesArray.reduce((s, b) => s + b.currentHP, 0);
     const totalPct = totalMax ? Math.round(100 * (1 - totalCurrent / totalMax)) : 0;
-
     if (totalPct >= 50)
       arr.push({
         id: "ach_raid_50",
         title: "Raid 50%",
-        desc: "Minst 50% av bossarnas HP nerslaget.",
+        desc: "Minst 50% av all boss-HP nedslagen.",
         emoji: "🐉",
       });
 
@@ -319,8 +553,19 @@ export default function App() {
       arr.push({
         id: "ach_battle_tier3",
         title: "Battle Pass Tier 3",
-        desc: "Nått minst tier 3.",
+        desc: "Nått minst tier 3 i Battle Pass.",
         emoji: "🎟️",
+      });
+
+    const eliteMuscles = Object.values(muscleStats).filter(
+      (m) => m.levelKey === "Elite"
+    ).length;
+    if (eliteMuscles >= 2)
+      arr.push({
+        id: "ach_multi_elite",
+        title: "Multi-Elite Queen",
+        desc: "Minst två muskelgrupper på Elite-nivå.",
+        emoji: "👑",
       });
 
     return arr;
@@ -328,21 +573,21 @@ export default function App() {
 
   const nextTierXp = battleTier * 200;
 
-  // Spara set
   function handleSaveSet(entry) {
     const today = new Date().toISOString().slice(0, 10);
-
     const finalEntry = {
       ...entry,
-      id: crypto.randomUUID?.() || Math.random().toString(36),
+      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36),
       date: entry.date || today,
     };
 
-    const prevForExercise = logs.filter((l) => l.exerciseId === finalEntry.exerciseId);
-    const prevBest = prevForExercise.length
-      ? Math.max(...prevForExercise.map((l) => calc1RM(l.weight, l.reps)))
+    // PR-check innan vi uppdaterar loggar
+    const previousForExercise = logs.filter(
+      (l) => l.exerciseId === finalEntry.exerciseId
+    );
+    const prevBest = previousForExercise.length
+      ? Math.max(...previousForExercise.map((l) => calc1RM(l.weight, l.reps)))
       : 0;
-
     const this1RM = calc1RM(finalEntry.weight, finalEntry.reps);
     const isPR = this1RM > prevBest;
 
@@ -351,17 +596,24 @@ export default function App() {
 
     if (isPR) {
       bumpMood("pr");
-      showToastMsg("Nytt PR! 💖🔥", "Bebi du är galen stark!");
+      showToastMsg("OMG BEBI!! NYTT PR!!! 🔥💖", "Du är helt magisk, jag svär.");
+    } else if (
+      lastSet &&
+      finalEntry.exerciseId === lastSet.exerciseId &&
+      finalEntry.weight >= lastSet.weight * 1.1
+    ) {
+      bumpMood("heavy_set");
+      showToastMsg("Starkiii set! 💪", "Du tog i extra hårt nyss!");
     } else {
-      showToastMsg("Set sparat 💪", "Du blev precis starkare.");
+      showToastMsg("Set sparat 💪", "Bebi, du blev precis lite starkare.");
     }
 
     setShowModal(false);
   }
 
-  // Ta bort logg
   function handleDeleteLog(id) {
-    setLogs((prev) => prev.filter((l) => l.id !== id));
+    const newLogs = logs.filter((l) => l.id !== id);
+    setLogs(newLogs);
     showToastMsg(
       "Logg borttagen 🗑️",
       "Statistik, PR, boss-HP & muskelkarta har uppdaterats."
@@ -375,9 +627,11 @@ export default function App() {
   }
 
   function handleNextDay() {
-    const prog = PROGRAMS.find((p) => p.id === activeProgramId);
+    const prog =
+      PROGRAMS.find((p) => p.id === activeProgramId) || PROGRAMS[0];
     if (!prog) return;
-    setDayIndex((idx) => (idx + 1) % prog.days.length);
+    const next = (dayIndex + 1) % prog.days.length;
+    setDayIndex(next);
   }
 
   function handleClaimReward(id) {
@@ -385,14 +639,14 @@ export default function App() {
     setClaimedRewards((prev) => [...prev, id]);
     bumpMood("achievement");
     const r = BATTLE_REWARDS.find((x) => x.id === id);
-    showToastMsg("Reward klaimad 🎁", r?.label || "");
+    showToastMsg("Reward klaimad 🎁", r ? r.label : "Du tog en battle pass-belöning!");
   }
 
   return (
     <div className="app-shell">
       {toast && <Toast title={toast.title} subtitle={toast.subtitle} />}
 
-      {/* SIDEBAR – desktop */}
+      {/* SIDEBAR (desktop) */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <div>
@@ -406,49 +660,72 @@ export default function App() {
             className={`sidebar-link ${view === "dashboard" ? "active" : ""}`}
             onClick={() => setView("dashboard")}
           >
-            🏠 Dashboard
+            <span className="icon">🏠</span>
+            <span>Dashboard</span>
           </button>
+
           <button
             className={`sidebar-link ${view === "log" ? "active" : ""}`}
             onClick={() => setView("log")}
           >
-            📓 Log
+            <span className="icon">📓</span>
+            <span>Log</span>
           </button>
+
           <button
             className={`sidebar-link ${view === "program" ? "active" : ""}`}
             onClick={() => setView("program")}
           >
-            📅 Program
+            <span className="icon">📅</span>
+            <span>Program</span>
           </button>
+
           <button
             className={`sidebar-link ${view === "boss" ? "active" : ""}`}
             onClick={() => setView("boss")}
           >
-            🐲 Boss
+            <span className="icon">🐲</span>
+            <span>Boss</span>
           </button>
+
           <button
             className={`sidebar-link ${view === "ach" ? "active" : ""}`}
             onClick={() => setView("ach")}
           >
-            🏅 Achievements
+            <span className="icon">🏅</span>
+            <span>Achievements</span>
           </button>
+
           <button
             className={`sidebar-link ${view === "pr" ? "active" : ""}`}
             onClick={() => setView("pr")}
           >
-            🏆 PR
+            <span className="icon">🏆</span>
+            <span>PR</span>
           </button>
+
           <button
             className={`sidebar-link ${view === "profile" ? "active" : ""}`}
             onClick={() => setView("profile")}
           >
-            👤 Profil
+            <span className="icon">👤</span>
+            <span>Profil</span>
           </button>
+
           <button
             className={`sidebar-link ${view === "lift" ? "active" : ""}`}
             onClick={() => setView("lift")}
           >
-            📈 LiftTools
+            <span className="icon">📈</span>
+            <span>LiftTools</span>
+          </button>
+
+          <button
+            className={`sidebar-link ${view === "cycle" ? "active" : ""}`}
+            onClick={() => setView("cycle")}
+          >
+            <span className="icon">📆</span>
+            <span>Cykel</span>
           </button>
         </div>
 
@@ -460,15 +737,17 @@ export default function App() {
         </div>
       </aside>
 
-      {/* MOBILMENY DRAWER */}
+      {/* MOBILE DRAWER */}
       <div className={`mobile-drawer ${mobileMenuOpen ? "open" : ""}`}>
         <div className="drawer-header">
           <span style={{ fontWeight: 600 }}>Bebi Gym 💗</span>
-          <button className="close-btn" onClick={() => setMobileMenuOpen(false)}>
+          <button
+            className="close-btn"
+            onClick={() => setMobileMenuOpen(false)}
+          >
             ×
           </button>
         </div>
-
         <div className="drawer-links">
           <button
             onClick={() => {
@@ -534,13 +813,21 @@ export default function App() {
           >
             📈 Lift Tools
           </button>
+          <button
+            onClick={() => {
+              setView("cycle");
+              setMobileMenuOpen(false);
+            }}
+          >
+            📆 Cykel
+          </button>
         </div>
       </div>
 
       {/* MAIN */}
       <main className="main">
         <div className="main-header">
-          {/* Hamburger mobil */}
+          {/* Hamburger på mobil */}
           <button
             className="hamburger-btn"
             onClick={() => setMobileMenuOpen(true)}
@@ -555,7 +842,6 @@ export default function App() {
               bossar, ger XP och bygger din PR-historia.
             </div>
           </div>
-
           <button className="btn-pink" onClick={() => setShowModal(true)}>
             + Logga set
           </button>
@@ -734,6 +1020,14 @@ export default function App() {
               }}
             />
           </div>
+        )}
+
+        {/* CYKEL VIEW */}
+        {view === "cycle" && (
+          <CycleView
+            cycleConfig={cycleConfig}
+            setCycleConfig={setCycleConfig}
+          />
         )}
 
         {/* ACHIEVEMENTS */}

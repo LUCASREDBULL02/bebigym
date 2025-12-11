@@ -540,3 +540,30 @@ body {
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
+.big-chart-card {
+  background: rgba(255, 79, 174, 0.08);
+  padding: 20px;
+  border-radius: 16px;
+  margin-top: 20px;
+}
+
+.dashboard-page {
+  padding-bottom: 40px;
+}
+
+.dashboard-page .profile-header {
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.dashboard-page .main-sub {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-bottom: 14px;
+}
+
+.empty-text {
+  padding: 16px;
+  opacity: 0.6;
+  text-align: center;
+}

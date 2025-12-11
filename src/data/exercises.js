@@ -83,13 +83,6 @@ export const EXERCISES = [
   { id: "zerchersquat", name: "Zercher Squat", muscles: ["quads", "core"] },
   { id: "beltSquat", name: "Belt Squat", muscles: ["quads", "glutes"] },
   { id: "landminesquat", name: "Landmine Squat", muscles: ["quads", "glutes"] },
-];
-// ------ CONTINUED EXERCISES LIST ------
-export const EXERCISES = [
-  ...EXERCISES, //
-
-  // fortsättning på övningarna här
-];
 
   { id: "closegripbench", name: "Close-Grip Bench Press", muscles: ["triceps", "chest"] },
   { id: "jmpress", name: "JM Press", muscles: ["triceps"] },
@@ -193,10 +186,6 @@ export const EXERCISES = [
   { id: "smithkickback", name: "Smith Kickback", muscles: ["glutes"] },
   { id: "glutefocusedlegpress", name: "Glute-Focused Leg Press", muscles: ["glutes"] },
   { id: "bandedhipthrust", name: "Banded Hip Thrust", muscles: ["glutes"] },
-
-];
-// ------ FINAL PART ------
-export const EXERCISES = [
 
   // --- Additional athletic & hypertrophy movements ---
   { id: "sledpush", name: "Sled Push", muscles: ["quads", "glutes", "calves"] },

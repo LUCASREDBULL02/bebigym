@@ -1,163 +1,184 @@
 // src/components/LiftTools.jsx
-import React, { useMemo, useState } from "react";
-import { EXERCISES } from "../data/exercises";
+import React, { useState, useMemo } from "react";
 
-function oneRmAllFormulas(weight, reps) {
-  // Returns object with 7 formula estimates
-  if (!weight || !reps) return null;
-  const r = Number(reps);
-  const w = Number(weight);
-  // Epley, Brzycki, Lander, Lombardi, Mayhew, O'Conner, Wathen
-  return {
-    Epley: Math.round(w * (1 + r / 30)),
-    Brzycki: Math.round(w * (36 / (37 - r))),
-    Lander: Math.round(w / (0.898 + 0.226 * r)),
-    Lombardi: Math.round(w * Math.pow(r, 0.1)),
-    Mayhew: Math.round((100 * w) / (52.2 + 41.9 * Math.exp(-0.055 * r))),
-    OConner: Math.round(w * (1 + r / 40)),
-    Wathen: Math.round((100 * w) / (48.8 + 53.8 * Math.exp(-0.075 * r))),
-  };
+function Tabs({tabs, value, onChange}){
+  return (
+    <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+      {tabs.map(t => (
+        <button key={t} onClick={()=>onChange(t)} className={`btn ${value===t ? "active" : ""}`} style={{ padding:"6px 10px" }}>
+          {t}
+        </button>
+      ))}
+    </div>
+  );
 }
 
-function SimpleLine({ points }) {
-  const width = 480, height = 140, pad = 18;
-  if (!points || points.length < 2) return null;
-  const xs = points.map((p, i) => pad + (i / (points.length - 1)) * (width - pad * 2));
-  const vals = points.map((p) => p.y);
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const path = points.map((p, i) => {
-    const x = xs[i];
-    const y = pad + ((max - p.y) / (max - min || 1)) * (height - pad * 2);
-    return `${x},${y}`;
-  }).join(" ");
-  return <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: 160 }}><polyline fill="none" stroke="#ff6ea1" strokeWidth="2" points={path} /></svg>;
-}
+export default function LiftTools({ logs, bodyStats, cycleInfo, onAddManual }) {
+  const [tab, setTab] = useState("1RM Estimator");
 
-export default function LiftTools({ logs = [], bodyStats = {}, onAddManual }) {
-  const [tab, setTab] = useState("1rm");
-  const [selEx, setSelEx] = useState(EXERCISES[0]?.id || "");
-  const exLogs = useMemo(() => logs.filter(l => l.exerciseId === selEx).slice().sort((a,b)=> b.date.localeCompare(a.date)), [logs, selEx]);
-
-  // Volume/week (sets)
-  const volumeData = useMemo(() => {
-    const week = {};
-    logs.forEach(l => {
-      const w = l.date;
-      week[w] = week[w] || 0;
-      week[w] += 1;
+  // build history per exercise for simple sparkline
+  const byExercise = useMemo(() => {
+    const map = {};
+    (logs||[]).forEach(l => {
+      if (!map[l.exerciseId]) map[l.exerciseId] = [];
+      const oneRm = Math.round(l.weight * (1 + l.reps/30));
+      map[l.exerciseId].push({ date: l.date, oneRm, weight: l.weight, reps: l.reps });
     });
-    const points = Object.entries(week).slice(-12).map(([d,c]) => ({ x:d, y:c }));
-    return points;
+    return map;
   }, [logs]);
 
-  // PR chart data
-  const prPoints = useMemo(() => {
-    return exLogs.map(l => ({ x: l.date, y: Math.round(l.weight * (1 + l.reps/30)) }));
-  }, [exLogs]);
+  return (
+    <div>
+      <Tabs tabs={["1RM Estimator","Volume Tracker","Progress Graphs","Body Progress"]} value={tab} onChange={setTab} />
 
-  const [manual, setManual] = useState({ exerciseId: EXERCISES[0]?.id || "", weight: "", reps: "", date: new Date().toISOString().slice(0,10) });
+      {tab === "1RM Estimator" && (
+        <div>
+          <h4>1RM Estimator (Epley)</h4>
+          <p className="small">Räkna 1RM från sets eller mata in manuellt.</p>
+          <div className="card" style={{ padding:12 }}>
+            <Manual1RM onAddManual={onAddManual} />
+          </div>
+        </div>
+      )}
 
-  function handleAdd() {
-    if (!manual.exerciseId || !manual.weight || !manual.reps) return;
-    const entry = { id: crypto.randomUUID?.() || Math.random().toString(36), exerciseId: manual.exerciseId, weight: Number(manual.weight), reps: Number(manual.reps), date: manual.date };
+      {tab === "Volume Tracker" && (
+        <div>
+          <h4>Volume Tracker (sets/week)</h4>
+          <div className="card">
+            <VolumeSummary logs={logs} />
+          </div>
+        </div>
+      )}
+
+      {tab === "Progress Graphs" && (
+        <div>
+          <h4>Styrkeutveckling per övning</h4>
+          <div style={{ display:"grid", gap:10 }}>
+            {Object.keys(byExercise).length === 0 && <p className="small">Inga lyft att visa.</p>}
+            {Object.entries(byExercise).map(([id, arr]) => (
+              <div key={id} className="card small" style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ fontWeight:700 }}>{id}</div>
+                <MiniSpark data={arr.map(x=>x.oneRm)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "Body Progress" && (
+        <div>
+          <h4>Body Progress Dashboard</h4>
+          <div className="card">
+            <BodyProgressChart bodyStats={bodyStats} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Helper subcomponents */
+function Manual1RM({ onAddManual }) {
+  const [exerciseId, setExerciseId] = useState("");
+  const [oneRm, setOneRm] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0,10));
+
+  function save(){
+    if(!oneRm || !exerciseId) return;
+    const entry = { id: Math.random().toString(36), exerciseId, weight: Math.round(oneRm), reps: 1, date };
     onAddManual && onAddManual(entry);
-    setManual({ ...manual, weight: "", reps: "" });
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <nav style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setTab("1rm")} className={`btn ${tab==="1rm"?"active":""}`}>1RM Estimator</button>
-        <button onClick={() => setTab("vol")} className={`btn ${tab==="vol"?"active":""}`}>Volume Tracker</button>
-        <button onClick={() => setTab("chart")} className={`btn ${tab==="chart"?"active":""}`}>Exercise Graph</button>
-        <button onClick={() => setTab("body")} className={`btn ${tab==="body"?"active":""}`}>Body Progress</button>
-      </nav>
+    <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+      <input placeholder="Övning id (ex: bench)" value={exerciseId} onChange={e=>setExerciseId(e.target.value)} />
+      <input placeholder="1RM kg" value={oneRm} onChange={e=>setOneRm(e.target.value)} />
+      <input type="date" value={date} onChange={e=>setDate(e.target.value)} />
+      <button className="btn-pink" onClick={save}>Lägg in</button>
+    </div>
+  );
+}
 
-      {tab==="1rm" && (
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>1RM Estimator — flera formler</h3>
-          <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-            <select value={manual.exerciseId} onChange={(e)=> setManual({...manual, exerciseId: e.target.value})}>
-              {EXERCISES.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-            <input placeholder="Vikt (kg)" value={manual.weight} onChange={(e)=> setManual({...manual, weight: e.target.value})} />
-            <input placeholder="Reps" value={manual.reps} onChange={(e)=> setManual({...manual, reps: e.target.value})} />
-            <button className="btn-pink" onClick={handleAdd}>Spara & estimera</button>
-          </div>
+function MiniSpark({ data = [] }) {
+  if(!data.length) return null;
+  const width = 140, height = 40;
+  const min = Math.min(...data), max = Math.max(...data);
+  const span = max - min || 1;
+  const pts = data.map((v,i) => {
+    const x = (i/(data.length-1))*width;
+    const y = height - ((v-min)/span)*height;
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg width={width} height={height}>
+      <polyline fill="none" stroke="#ff6ea1" strokeWidth="2" points={pts} />
+    </svg>
+  );
+}
 
-          <div style={{ marginTop: 12 }}>
-            <h4 style={{ margin: "6px 0 8px 0" }}>Formelestimat</h4>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(() => {
-                const val = oneRmAllFormulas(manual.weight, manual.reps);
-                if (!val) return <div className="small">Fyll i vikt + reps för att se estimat.</div>;
-                return Object.entries(val).map(([k,v]) => (
-                  <div key={k} style={{ minWidth:140, padding:8, borderRadius:10, background:"rgba(255,255,255,0.02)" }}>
-                    <div style={{ fontSize:12, color:"var(--muted)" }}>{k}</div>
-                    <div style={{ fontWeight:700, fontSize:18 }}>{v} kg</div>
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
+function VolumeSummary({ logs=[] }) {
+  // simple sets/week count: group by ISO week
+  const weeks = {};
+  logs.forEach(l => {
+    const wk = l.date.slice(0,7); // crude month-week key
+    weeks[wk] = (weeks[wk]||0) + 1;
+  });
+  return (
+    <div>
+      {Object.keys(weeks).length === 0 && <p className="small">Inga loggar än.</p>}
+      {Object.entries(weeks).map(([wk,c]) => (
+        <div key={wk} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px dashed rgba(255,255,255,0.02)" }}>
+          <div>{wk}</div>
+          <div>{c} sets</div>
         </div>
-      )}
+      ))}
+    </div>
+  );
+}
 
-      {tab==="vol" && (
-        <div className="card">
-          <h3 style={{ marginTop:0 }}>Volume Tracker — sets per day</h3>
-          <div className="small" style={{ marginBottom:8 }}>Visar senaste dagar. Använd det för att säkerställa progressiv volym.</div>
-          <SimpleLine points={volumeData.map((p,i)=>({x:i,y:p.y}))} />
-        </div>
-      )}
+function BodyProgressChart({ bodyStats={} }) {
+  // plot all metrics on one chart with simple normalized scaling
+  const keys = Object.keys(bodyStats);
+  const allDates = {};
+  keys.forEach(k => bodyStats[k].forEach(m => allDates[m.date] = true));
+  const dates = Object.keys(allDates).sort();
 
-      {tab==="chart" && (
-        <div className="card">
-          <h3 style={{ marginTop:0 }}>Exercise Graph — {EXERCISES.find(e=>e.id===selEx)?.name || selEx}</h3>
-          <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:8 }}>
-            <select value={selEx} onChange={(e)=> setSelEx(e.target.value)}>
-              {EXERCISES.map(e=> <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-            <div className="small">Visar estimerad 1RM över tid</div>
-          </div>
+  if(dates.length === 0) return <p className="small">Inga kroppsmått ännu</p>;
 
-          {prPoints.length ? (
-            <SimpleLine points={prPoints.map((p,i)=>({x:i,y:p.y}))} />
-          ) : <div className="empty-text">Inga loggar för denna övning än.</div>}
+  // build dataset per metric
+  const datasets = keys.map(k => {
+    const map = {};
+    bodyStats[k].forEach(m => map[m.date] = m.value);
+    const values = dates.map(d => map[d] ?? null);
+    return { key:k, values };
+  });
 
-          <div style={{ marginTop:8 }}>
-            <h4 className="small">Senaste loggar</h4>
-            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-              {exLogs.slice(0,6).map(l => <div key={l.id} style={{ padding:8, borderRadius:8, background:"rgba(255,255,255,0.02)", display:"flex", justifyContent:"space-between" }}>{l.date} <strong>{l.weight}kg×{l.reps}</strong></div>)}
-            </div>
-          </div>
-        </div>
-      )}
+  // normalize values to chart height
+  const width = Math.min(720, Math.max(300, dates.length * 40));
+  const height = 180;
 
-      {tab==="body" && (
-        <div className="card">
-          <h3 style={{ marginTop:0 }}>Body Progress — alla mått</h3>
-          <div className="small">Alla kroppsmått i ett linjediagram</div>
-          <div style={{ marginTop:10 }}>
-            {/* Reuse simple multi-series sparkline from elsewhere if present; otherwise show fallback */}
-            {/* We'll show a simple placeholder if no body stats */}
-            {Object.values(bodyStats).flat().length ? (
-              <div style={{ minHeight:160 }}>
-                {/* We'll render a simple combined chart using inline SVG */}
-                {/* For brevity we just show "no external libs" simple line per metric */}
-                {/* Build a quick combined dataset */}
-                <svg viewBox="0 0 800 220" style={{ width:"100%", height:220 }}>
-                  {/* background grid */}
-                  <rect x="0" y="0" width="800" height="220" fill="transparent" rx="10" />
-                </svg>
-                <div className="small" style={{ marginTop:8 }}>Scrolla i grafer för mer detaljer.</div>
-              </div>
-            ) : (
-              <div className="empty-text">Inga kroppsmått sparade ännu.</div>
-            )}
-          </div>
-        </div>
-      )}
+  return (
+    <div style={{ overflowX:"auto" }}>
+      <svg width={width} height={height} style={{ display:"block" }}>
+        <rect x="0" y="0" width={width} height={height} fill="transparent" />
+        {datasets.map((ds, idx) => {
+          const color = idx===0 ? "#ff6ea1" : idx===1 ? "#ff9bbd" : idx%2===0 ? "#ffd6e0" : "#fbdcee";
+          const vals = ds.values.map(v => v===null?null:v);
+          const nums = vals.filter(v=>v!==null);
+          if(nums.length===0) return null;
+          const min = Math.min(...nums), max = Math.max(...nums);
+          const span = max - min || 1;
+          const pts = vals.map((v,i) => {
+            const x = (i/(dates.length-1))*(width-20)+10;
+            const y = v===null ? height : height - ((v-min)/span)*(height-20)-10;
+            return `${x},${y}`;
+          }).join(" ");
+          return <polyline key={ds.key} points={pts} fill="none" stroke={color} strokeWidth="2" opacity={0.95} />;
+        })}
+      </svg>
+      <div style={{ display:"flex", gap:12, marginTop:8, flexWrap:"wrap" }}>
+        {datasets.map((d, i) => <div key={d.key} style={{ fontSize:12, color:"var(--muted)" }}>{d.key}</div>)}
+      </div>
     </div>
   );
 }

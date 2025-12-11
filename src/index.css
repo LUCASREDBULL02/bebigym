@@ -1,107 +1,123 @@
-/* -----------------------------------
-   GLOBAL THEME – ROSA / SOFT / CLEAN
------------------------------------ */
+/* ----------------------------------------------------
+   iOS THEME – Soft, glassy, pastel pink UI aesthetic
+---------------------------------------------------- */
 
 :root {
-  --bg: #0f172a;
-  --bg-card: rgba(255, 255, 255, 0.06);
-  --bg-card-solid: #1e293b;
-  --fg: #f1f5f9;
-  --sub: #94a3b8;
-  --pink: #ff8fbf;
-  --pink-dark: #ff6fa9;
-  --line-soft: rgba(255, 143, 191, 0.2);
-  --radius: 12px;
-  --radius-lg: 18px;
-  --transition: 0.18s ease;
+  --bg: #0d111c;
+  --bg-blur: rgba(255, 255, 255, 0.06);
+  --bg-card: rgba(255, 255, 255, 0.10);
+  --bg-card-solid: #1c2333;
+
+  --text: #fdfcff;
+  --text-sub: #bfc7d6;
+
+  --pink: #ffb4d6;
+  --pink-bright: #ff8fc8;
+  --pink-dark: #fa6db6;
+
+  --lavender: #c7b4ff;
+  --blue-soft: #8fbaff;
+
+  --radius: 18px;
+  --radius-lg: 24px;
+
+  --shadow-ios: 0px 10px 30px rgba(0,0,0,0.25);
+  --shadow-soft: 0px 6px 14px rgba(0,0,0,0.18);
+
+  --transition: 0.22s cubic-bezier(.25,.8,.25,1);
 }
+
+/* ---------------- GLOBAL ---------------- */
 
 html, body {
   padding: 0;
   margin: 0;
   background: var(--bg);
-  color: var(--fg);
-  font-family: "Inter", system-ui, sans-serif;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-button, input, select {
-  font-family: inherit;
-  outline: none;
+/* Smooth animations globally */
+* {
+  transition: var(--transition);
 }
 
-h3, h4 {
-  margin-top: 0;
-  color: var(--pink);
+/* ---------------- CARDS (iOS Glassmorphism) ---------------- */
+
+.card {
+  background: var(--bg-blur);
+  backdrop-filter: blur(22px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 20px;
+  box-shadow: var(--shadow-soft);
 }
 
-/* -----------------------------------
-   LAYOUT
------------------------------------ */
-
-.app-shell {
-  display: flex;
-  min-height: 100vh;
-  overflow: hidden;
+/* SMALL CARD */
+.card.small {
+  padding: 14px 16px;
 }
 
-/* ---- SIDEBAR (DESKTOP) ---- */
+/* ---------------- SIDEBAR (Desktop Only) ---------------- */
 
 .sidebar {
   width: 240px;
-  background: #1a2234;
+  background: rgba(255,255,255,0.04);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(18px);
   padding: 20px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 143, 191, 0.15);
+  box-shadow: inset -1px 0 0 rgba(255,255,255,0.05);
 }
 
 .sidebar-header {
-  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 14px;
 }
 
 .sidebar-title {
-  font-size: 18px;
   font-weight: 700;
+  font-size: 20px;
   color: var(--pink);
 }
 
 .sidebar-sub {
-  font-size: 12px;
-  color: var(--sub);
+  font-size: 13px;
+  color: var(--text-sub);
 }
 
-/* ---- NAV BUTTONS ---- */
-
 .sidebar-nav {
+  margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .sidebar-link {
-  background: none;
+  background: rgba(255,255,255,0.04);
   border: none;
+  padding: 12px;
   text-align: left;
-  padding: 10px 12px;
+  color: var(--text);
   border-radius: var(--radius);
-  font-size: 14px;
-  color: var(--fg);
   cursor: pointer;
-  transition: var(--transition);
+  font-size: 15px;
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 143, 191, 0.1);
+  background: rgba(255,255,255,0.14);
 }
 
 .sidebar-link.active {
   background: var(--pink);
   color: #111;
+  font-weight: 600;
 }
 
-/* -----------------------------------
-   MOBILE DRAWER (HIDDEN ON DESKTOP)
------------------------------------ */
+/* ---------------- MOBILE DRAWER (iOS Sheet Style) ---------------- */
 
 .mobile-drawer {
   position: fixed;
@@ -109,87 +125,70 @@ h3, h4 {
   left: -260px;
   width: 240px;
   height: 100%;
-  background: #1a2234;
+  background: rgba(27, 31, 47, 0.88);
+  backdrop-filter: blur(26px);
   padding: 20px;
-  transition: 0.25s ease;
-  z-index: 2000;
+  z-index: 3000;
+  transition: 0.35s cubic-bezier(.25,.8,.25,1);
+  box-shadow: 8px 0px 22px rgba(0,0,0,0.25);
+  border-right: 1px solid rgba(255,255,255,0.06);
 }
 
 .mobile-drawer.open {
   left: 0;
 }
 
-.drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.drawer-links {
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .drawer-links button {
-  background: none;
+  background: rgba(255,255,255,0.06);
   border: none;
-  padding: 10px 12px;
+  padding: 12px 10px;
   border-radius: var(--radius);
+  margin-bottom: 6px;
+  width: 100%;
   text-align: left;
-  color: var(--fg);
-  font-size: 14px;
+  color: var(--text);
+  font-size: 15px;
 }
 
 .drawer-links button:hover {
-  background: rgba(255, 143, 191, 0.15);
+  background: rgba(255,255,255,0.16);
 }
 
 .close-btn {
   background: none;
   border: none;
+  font-size: 26px;
   color: var(--pink);
-  font-size: 20px;
 }
 
-/* -----------------------------------
-   RESPONSIVE NAV RULES
------------------------------------ */
+/* Hide drawer on desktop */
+@media (min-width: 900px) {
+  .mobile-drawer {
+    display: none !important;
+  }
+}
+
+/* ---------------- HAMBURGER ---------------- */
 
 .hamburger-btn {
   display: none;
   background: none;
   border: none;
   color: var(--pink);
-  font-size: 24px;
-  cursor: pointer;
+  font-size: 30px;
+  padding: 6px;
 }
 
 @media (max-width: 900px) {
-
-  .sidebar {
-    display: none;
-  }
-
   .hamburger-btn {
     display: block;
   }
-
-  .mobile-drawer {
-    display: block;
+  .sidebar {
+    display: none;
   }
 }
 
-@media (min-width: 901px) {
-  .mobile-drawer {
-    display: none !important;
-  }
-}
-
-/* -----------------------------------
-   MAIN CONTENT
------------------------------------ */
+/* ---------------- MAIN ---------------- */
 
 .main {
   flex: 1;
@@ -199,233 +198,137 @@ h3, h4 {
 .main-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.main-title {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.main-sub {
-  font-size: 13px;
-  color: var(--sub);
-}
-
-/* -----------------------------------
-   CARDS
------------------------------------ */
-
-.card {
-  background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 18px;
+  justify-content: space-between;
+  background: var(--bg-blur);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(8px);
+  padding: 16px;
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: var(--shadow-ios);
 }
 
-/* -----------------------------------
-   BUTTONS
------------------------------------ */
+/* ---------------- BUTTONS ---------------- */
 
 .btn {
-  padding: 8px 16px;
+  padding: 10px 16px;
   border-radius: var(--radius);
-  border: 1px solid var(--sub);
-  background: transparent;
-  color: var(--fg);
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
   cursor: pointer;
-  transition: var(--transition);
+  font-weight: 500;
 }
 
 .btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255,255,255,0.12);
 }
 
 .btn-pink {
-  padding: 9px 18px;
+  padding: 10px 18px;
+  background: var(--pink);
   border-radius: var(--radius);
   border: none;
-  background: var(--pink);
+  font-weight: 700;
   color: #111;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
 }
 
 .btn-pink:hover {
-  background: var(--pink-dark);
+  background: var(--pink-bright);
 }
 
-/* -----------------------------------
-   INPUTS
------------------------------------ */
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 10px;
-}
-
-.input-group label {
-  font-size: 12px;
-  margin-bottom: 4px;
-  color: var(--sub);
-}
+/* ---------------- INPUTS (iOS Rounded Fields) ---------------- */
 
 .input-group input,
 .input-group select {
-  padding: 8px;
-  background: #1f2a3d;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--fg);
-  border-radius: var(--radius);
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  font-size: 15px;
 }
 
-.input-row {
-  display: flex;
-  gap: 10px;
+.input-group label {
+  font-size: 13px;
+  color: var(--text-sub);
 }
 
-/* -----------------------------------
-   TABS (LiftTools)
------------------------------------ */
+/* ---------------- TABS (iOS segmented control style) ---------------- */
 
 .tabs {
   display: flex;
+  background: rgba(255,255,255,0.08);
+  padding: 6px;
+  border-radius: var(--radius-lg);
   gap: 6px;
-  overflow-x: auto;
 }
 
 .tab {
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
+  flex: 1;
+  padding: 10px 12px;
   border-radius: var(--radius);
-  color: var(--fg);
+  background: transparent;
+  border: none;
+  text-align: center;
+  color: var(--text-sub);
+  font-weight: 500;
   cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
-}
-
-.tab:hover {
-  background: rgba(255, 143, 191, 0.18);
 }
 
 .tab.active {
   background: var(--pink);
   color: #111;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-/* -----------------------------------
-   STAT PILLS
------------------------------------ */
+/* ---------------- PROFILE VIEW CARDS ---------------- */
 
-.stat-pill {
-  background: rgba(255, 255, 255, 0.06);
-  padding: 6px 10px;
-  border-radius: var(--radius);
+.profile-card {
+  background: var(--bg-blur);
+  border-radius: var(--radius-lg);
+  padding: 20px;
   border: 1px solid rgba(255,255,255,0.08);
-  font-size: 12px;
-}
-
-/* -----------------------------------
-   ESTIMATOR CARDS
------------------------------------ */
-
-.est-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 10px;
-}
-
-.est-card {
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.08);
-  text-align: center;
-}
-
-/* -----------------------------------
-   VOLUME CARDS
------------------------------------ */
-
-.volume-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.volume-card {
-  background: rgba(255,255,255,0.07);
-  padding: 12px;
-  border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-/* -----------------------------------
-   PROFILE VIEW BOOST
------------------------------------ */
-
-.profile-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px,1fr));
-  gap: 10px;
-}
-
-.profile-avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 12px;
-  object-fit: cover;
-  border: 2px solid var(--pink);
-}
-
-.measure-list {
-  margin-top: 10px;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 20px;
 }
 
 .measure-item {
-  background: rgba(255,255,255,0.06);
-  padding: 10px;
+  background: rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 12px;
   border-radius: var(--radius);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid rgba(255,255,255,0.07);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
-/* -----------------------------------
-   GRAPH BACKGROUND
------------------------------------ */
+/* ---------------- GRAPH STYLING ---------------- */
 
 svg {
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: var(--radius);
+  background: rgba(255,255,255,0.04);
+  padding: 8px;
+  border-radius: var(--radius-lg);
 }
 
-/* -----------------------------------
-   MISC
------------------------------------ */
+/* ---------------- CLEAN LISTS ---------------- */
 
-.empty-text {
-  font-size: 13px;
-  color: var(--sub);
-  margin-top: 6px;
+ul {
+  margin: 0;
+  padding: 0;
 }
+
+li {
+  list-style: none;
+}
+
+/* ---------------- FLEX HELPERS ---------------- */
 
 .row {
   display: flex;
-  gap: 10px;
+  gap: 16px;
 }
 
 .col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
 }
+

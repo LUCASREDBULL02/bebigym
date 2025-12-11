@@ -391,86 +391,22 @@ export default function App() {
         </div>
 
         {/* VIEW ROUTER */}
-        {view === "dashboard" && (
-          <div className="row">
-            <div className="col">
-              <div className="card small">
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>XP & Level</div>
-                    <div className="small">XP baserat på tunga set</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div>{xp} XP</div>
-                    <div>Tier {tier}</div>
-                  </div>
-                </div>
+     {view === "dashboard" && (
+  <Dashboard xp={xp} battleTier={battleTier} nextTierXp={nextTierXp}
+    muscleStats={muscleStats} comparisonData={comparisonData}
+    bosses={bosses} cycleInfo={cycleInfo} todayFactor={todayFactor}
+    onClaimReward={handleClaimReward} battleRewards={BATTLE_REWARDS}
+    claimedRewards={claimedRewards}
+  />
+)}
 
-                <div className="progress-wrap" style={{ marginTop: 8 }}>
-                  <div className="progress-fill" style={{ width: `${Math.min(100, xp / nextTierXP * 100)}%` }} />
-                </div>
-              </div>
+{view === "pr" && <PRPage prMap={prMap} logs={logs} />}
 
-              <MuscleMap muscleStats={muscleStats} />
+{view === "cycle" && (
+  <CycleCalendar cycleStart={cycleStart} setCycleStart={setCycleStart}
+    cycleLength={cycleLength} setCycleLength={setCycleLength} />
+)}
 
-              <div style={{ marginTop: 14 }}>
-                <MuscleComparison data={compData} />
-              </div>
-            </div>
-
-            <div className="col">
-              <BossArena bosses={bosses} />
-
-              <div className="card small">
-                <div style={{ fontWeight: 700, marginBottom: 4 }}>Cykelrekommendation</div>
-                <div className="small">
-                  Fas: {cycleInfo ? cycleInfo.phase : "Ej satt"} • Intensitet: {Math.round(intFactor * 100)}%
-                </div>
-              </div>
-
-              <BattlePass
-                tier={tier}
-                xp={xp}
-                nextTierXp={nextTierXP}
-                rewards={REWARDS}
-                claimedRewards={[]}
-                onClaimReward={() => {}}
-              />
-            </div>
-          </div>
-        )}
-
-        {view === "log" && (
-          <div className="card">
-            <h3>Loggade set 📓</h3>
-            {!logs.length && <div className="small">Inga set än</div>}
-
-            {logs.map((l) => {
-              const ex = EXERCISES.find((e) => e.id === l.exerciseId);
-              return (
-                <div key={l.id} className="log-row">
-                  <div>
-                    {l.date} — {ex?.name} • {l.weight} kg × {l.reps}
-                  </div>
-                  <button className="btn" onClick={() => deleteLog(l.id)}>🗑️</button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {view === "program" && (
-          <ProgramRunner
-            programs={PROGRAMS}
-            logs={logs}
-          />
-        )}
-
-        {view === "boss" && <BossArena bosses={bosses} />}
-
-        {view === "ach" && <Achievements unlocked={achievements} />}
-
-        {view === "pr" && <PRList prMap={prMap} />}
 
         {view === "profile" && (
           <ProfileView

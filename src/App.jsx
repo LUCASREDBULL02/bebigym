@@ -11,7 +11,6 @@ import ProgramRunner from "./components/ProgramRunner.jsx";
 import PRList from "./components/PRList.jsx";
 import MuscleComparison from "./components/MuscleComparison.jsx";
 import LiftTools from "./components/LiftTools.jsx";
-
 import { buildComparisonChartData } from "./utils/comparisonData.js";
 import { useBebiMood } from "./hooks/useBebiMood.js";
 import { EXERCISES } from "./data/exercises";
@@ -20,14 +19,155 @@ import { STRENGTH_STANDARDS } from "./data/strengthStandards";
 import { PROGRAMS } from "./data/programs";
 import { initialBosses } from "./data/bosses";
 
-/* -------------------------
-   Small helpers (kept compact)
-   ------------------------- */
+/* =========================
+   Small helpers & constants
+   ========================= */
+const BATTLE_REWARDS = [
+  { id: "r_50xp", xpRequired: 50, label: "Warmup Queen", emoji: "💖" },
+  { id: "r_200xp", xpRequired: 200, label: "Tier 2 Gift", emoji: "🎁" },
+  { id: "r_500xp", xpRequired: 500, label: "Boss Slayer", emoji: "🐲" },
+  { id: "r_1000xp", xpRequired: 1000, label: "Legendary Bebi", emoji: "🌟" },
+];
 
 function calc1RM(weight, reps) {
   if (!weight || !reps) return 0;
   return Math.round(weight * (1 + reps / 30));
 }
+function uid() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+/* ===== Cycle components inlined (so App.jsx is self-contained) ===== */
+
+/**
+ * CycleStrengthChart (simple sparkline-like chart using SVG)
+ * Shows a rough "relative strength potential" curve across a 28-day cycle.
+ */
+function CycleStrengthChart({ cycle }) {
+  if (!cycle || !cycle.length) return null;
+  // cycle is array of {dayIndex: 0..len-1, value: 0..1}
+  const width = 300;
+  const height = 56;
+  const points = cycle
+    .map((p, i) => {
+      const x = (i / (cycle.length - 1)) * width;
+      const y = height - p.value * height;
+      return `${x},${y}`;
+    })
+    .join(" ");
+  return (
+    <svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{ borderRadius: 8 }}>
+      <polyline
+        fill="none"
+        stroke="#ff7abf"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        points={points}
+      />
+    </svg>
+  );
+}
+
+/**
+ * CycleTracker - stores start date & length, computes phase & daily strength
+ * Exposes: cycleData {startDate, length}, computed cycle array and todayPhase
+ */
+function CycleTracker({ cycleData, setCycleData }) {
+  const length = Number(cycleData?.length || 28);
+  const start = cycleData?.startDate || new Date().toISOString().slice(0, 10);
+
+  // Build cycle array (0..length-1) => value 0..1 representing strength potential
+  const cycleArr = [];
+  for (let i = 0; i < length; i++) {
+    // Simple shape: follicular rise -> peak at ovulation (~day 12-14), luteal slight dip
+    // Normalize based on length
+    const relative = i / (length - 1);
+    // gaussian-ish peak near 0.45
+    const peakCenter = 0.45;
+    const dist = Math.abs(relative - peakCenter);
+    const base = Math.max(0, 1 - dist * 2.6); // scale
+    // small baseline
+    const val = 0.5 * (0.5 + base);
+    cycleArr.push({ dayIndex: i, value: Math.max(0.12, Math.min(1, val)) });
+  }
+
+  // compute today index
+  const daysSince = (() => {
+    try {
+      const s = new Date(start);
+      const t = new Date();
+      const d = Math.floor((t - s) / (1000 * 60 * 60 * 24));
+      return ((d % length) + length) % length;
+    } catch (e) {
+      return 0;
+    }
+  })();
+
+  // phase labeling helper
+  function phaseForIndex(idx) {
+    const pct = idx / length;
+    if (pct < 0.15) return "Menstruation";
+    if (pct < 0.45) return "Follikulär";
+    if (pct < 0.55) return "Ägglossning";
+    return "Luteal";
+  }
+
+  const todayPhase = phaseForIndex(daysSince);
+
+  return (
+    <div className="cycle-card card small" style={{ gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Cykel & styrka</div>
+          <div className="small">Din fas idag: <strong>{todayPhase}</strong></div>
+        </div>
+        <div style={{ textAlign: "right", fontSize: 12 }}>
+          <div>Dag {daysSince + 1}/{length}</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 6 }}>
+        <CycleStrengthChart cycle={cycleArr} />
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+        <label style={{ flex: 1 }}>
+          Startdatum
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setCycleData({ ...cycleData, startDate: e.target.value })}
+            style={{ width: "100%", padding: 6, borderRadius: 6, marginTop: 6 }}
+          />
+        </label>
+
+        <label style={{ width: 110 }}>
+          Längd (dgr)
+          <input
+            type="number"
+            value={length}
+            min={21}
+            max={35}
+            onChange={(e) => setCycleData({ ...cycleData, length: Math.max(21, Math.min(35, Number(e.target.value || 28))) })}
+            style={{ width: "100%", padding: 6, borderRadius: 6, marginTop: 6 }}
+          />
+        </label>
+      </div>
+
+      <div className="small" style={{ marginTop: 6, color: "#d1d5db" }}>
+        Träningsförslag: <strong>
+          {todayPhase === "Follikulär" || todayPhase === "Ägglossning" ? "Tunga set / låg volym" : "Högre volym, lättare belastning"}
+        </strong>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Core app logic (clean)
+   ========================= */
 
 function cloneBosses(b) {
   return {
@@ -36,12 +176,10 @@ function cloneBosses(b) {
     back: { ...b.back },
   };
 }
-
 function applyBossDamageToState(stateBosses, entry, oneRm, isPR) {
   const copy = cloneBosses(stateBosses);
   let dmgBase = oneRm;
   if (isPR) dmgBase *= 1.5;
-
   if (entry.exerciseId === "bench") {
     copy.chest.currentHP = Math.max(0, copy.chest.currentHP - Math.round(dmgBase * 0.6));
   } else if (["hipthrust", "legpress", "squat"].includes(entry.exerciseId)) {
@@ -52,177 +190,122 @@ function applyBossDamageToState(stateBosses, entry, oneRm, isPR) {
   return copy;
 }
 
-/* recomputeFromLogs returns xp, battleTier, bosses, prMap */
 function recomputeFromLogs(logs, profile) {
-  let xp = 0;
-  let battleTier = 1;
-  let bosses = initialBosses();
-  let prMap = {};
-
+  let xp = 0; let battleTier = 1; let bosses = initialBosses(); let prMap = {};
   const chronological = [...logs].reverse();
   chronological.forEach((entry) => {
     const oneRm = calc1RM(entry.weight, entry.reps);
     const gainedXp = Math.max(5, Math.round(oneRm / 10));
     xp += gainedXp;
     battleTier = 1 + Math.floor(xp / 200);
-
     const currentPR = prMap[entry.exerciseId]?.best1RM || 0;
     const isPR = oneRm > currentPR;
-
-    // update prMap
-    const curr = prMap[entry.exerciseId] || { best1RM: 0, history: [] };
-    const history = [...curr.history, { ...entry, oneRm }];
-    const best1RM = isPR ? oneRm : curr.best1RM;
+    const history = [...(prMap[entry.exerciseId]?.history || []), { ...entry, oneRm }];
+    const best1RM = isPR ? oneRm : Math.max(currentPR, oneRm);
     prMap[entry.exerciseId] = { best1RM, history };
-
     bosses = applyBossDamageToState(bosses, entry, oneRm, isPR);
   });
-
   return { xp, battleTier, bosses, prMap };
 }
 
-/* computeMuscleStatsFromLogs (StrengthLevel-like) */
-function computeMuscleStatsFromLogs(logs, profile) {
+// Strength-level style per-muscle from PR map
+function computeMuscleStatsFromPRMap(prMap, profile) {
   const stats = {};
-  MUSCLES.forEach((m) => {
-    stats[m.id] = { score: 0, levelKey: "Beginner", percent: 0 };
-  });
-
-  if (!logs || logs.length === 0) return stats;
-  const bw = profile?.weight || profile?.weight_kg || 60;
-
-  // best 1RM per exercise from logs
-  const best = {};
-  logs.forEach((l) => {
-    if (!l.weight || !l.reps) return;
-    const oneRm = calc1RM(l.weight, l.reps);
-    if (!best[l.exerciseId] || oneRm > best[l.exerciseId]) best[l.exerciseId] = oneRm;
-  });
-
-  Object.entries(best).forEach(([exId, oneRm]) => {
+  MUSCLES.forEach((m) => (stats[m.id] = { score: 0, levelKey: "Beginner", percent: 0 }));
+  if (!prMap || typeof prMap !== "object") return stats;
+  const bw = profile?.weight || 60;
+  Object.entries(prMap).forEach(([exId, data]) => {
     const std = STRENGTH_STANDARDS[exId];
-    if (!std) return;
+    if (!std || !data?.best1RM) return;
     const target = bw * std.coeff;
-    if (!target || target <= 0) return;
-    const ratio = oneRm / target;
-    std.muscles.forEach((mId) => {
-      if (stats[mId]) stats[mId].score += ratio;
-    });
+    if (!target) return;
+    const ratio = data.best1RM / target;
+    std.muscles.forEach((mId) => { if (stats[mId]) stats[mId].score += ratio; });
   });
-
   Object.keys(stats).forEach((mId) => {
-    const score = stats[mId].score || 0;
-    let levelKey = "Beginner";
-    if (score >= 0.55) levelKey = "Novice";
-    if (score >= 0.75) levelKey = "Intermediate";
-    if (score >= 1.0) levelKey = "Advanced";
-    if (score >= 1.25) levelKey = "Elite";
-    const percent = Math.min(150, Math.max(0, Math.round((score / 1.25) * 100)));
-    stats[mId] = { ...stats[mId], levelKey, percent };
+    const sc = stats[mId].score || 0;
+    let level = "Beginner";
+    if (sc >= 0.55) level = "Novice";
+    if (sc >= 0.75) level = "Intermediate";
+    if (sc >= 1.0) level = "Advanced";
+    if (sc >= 1.25) level = "Elite";
+    const pct = Math.min(150, Math.max(0, Math.round((sc / 1.25) * 100)));
+    stats[mId] = { score: sc, levelKey: level, percent: pct };
   });
-
   return stats;
 }
 
-/* -------------------------
-   MAIN APP
-   ------------------------- */
-
+/* =========================
+   Main App
+   ========================= */
 export default function App() {
   const [view, setView] = useState("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // logs (persisted)
+  // logs (persist)
   const [logs, setLogs] = useState(() => {
-    try {
-      const raw = localStorage.getItem("bebi_logs");
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
+    try { const s = localStorage.getItem("bebi_logs"); return s ? JSON.parse(s) : []; } catch { return []; }
   });
-  useEffect(() => {
-    try {
-      localStorage.setItem("bebi_logs", JSON.stringify(logs));
-    } catch (e) {}
-  }, [logs]);
+  useEffect(() => localStorage.setItem("bebi_logs", JSON.stringify(logs)), [logs]);
 
-  // profile (persisted)
+  // profile (persist)
   const [profile, setProfile] = useState(() => {
-    try {
-      const raw = localStorage.getItem("bebi_profile");
-      return raw
-        ? JSON.parse(raw)
-        : {
-            name: "Maria Kristina",
-            nick: "Bebi",
-            age: 21,
-            height: 170,
-            weight: 68,
-            avatar: "/avatar.png",
-          };
-    } catch (e) {
-      return {
-        name: "Maria Kristina",
-        nick: "Bebi",
-        age: 21,
-        height: 170,
-        weight: 68,
-        avatar: "/avatar.png",
-      };
-    }
+    try { const s = localStorage.getItem("bebi_profile"); return s ? JSON.parse(s) : { name: "Maria Kristina", nick: "Bebi", age: 21, height: 170, weight: 68, avatar: "/avatar.png" }; } catch { return { name: "Maria Kristina", nick: "Bebi", age: 21, height: 170, weight: 68, avatar: "/avatar.png" }; }
   });
-  useEffect(() => {
-    try {
-      localStorage.setItem("bebi_profile", JSON.stringify(profile));
-    } catch (e) {}
-  }, [profile]);
+  useEffect(() => localStorage.setItem("bebi_profile", JSON.stringify(profile)), [profile]);
 
-  // bodyStats (persisted)
+  // body stats (persist)
   const [bodyStats, setBodyStats] = useState(() => {
-    try {
-      const raw = localStorage.getItem("bebi_bodyStats");
-      return raw
-        ? JSON.parse(raw)
-        : { waist: [], hips: [], thigh: [], glutes: [], chest: [], arm: [] };
-    } catch (e) {
-      return { waist: [], hips: [], thigh: [], glutes: [], chest: [], arm: [] };
-    }
+    try { const s = localStorage.getItem("bebi_bodyStats"); return s ? JSON.parse(s) : { waist: [], hips: [], thigh: [], glutes: [], chest: [], arm: [] }; } catch { return { waist: [], hips: [], thigh: [], glutes: [], chest: [], arm: [] }; }
   });
-  useEffect(() => {
-    try {
-      localStorage.setItem("bebi_bodyStats", JSON.stringify(bodyStats));
-    } catch (e) {}
-  }, [bodyStats]);
+  useEffect(() => localStorage.setItem("bebi_bodyStats", JSON.stringify(bodyStats)), [bodyStats]);
+
+  // cycle system (persist)
+  const [cycleData, setCycleData] = useState(() => {
+    try { const s = localStorage.getItem("bebi_cycle"); return s ? JSON.parse(s) : { startDate: new Date().toISOString().slice(0,10), length: 28 }; } catch { return { startDate: new Date().toISOString().slice(0,10), length: 28 }; }
+  });
+  useEffect(() => localStorage.setItem("bebi_cycle", JSON.stringify(cycleData)), [cycleData]);
+
+  const [bosses, setBosses] = useState(() => {
+    try { const s = localStorage.getItem("bebi_bosses"); return s ? JSON.parse(s) : initialBosses(); } catch { return initialBosses(); }
+  });
+  useEffect(() => localStorage.setItem("bebi_bosses", JSON.stringify(bosses)), [bosses]);
+
+  const [xpState, setXpState] = useState(() => { try { const s = localStorage.getItem("bebi_xp"); return s ? JSON.parse(s) : 0; } catch { return 0; } });
+  useEffect(() => localStorage.setItem("bebi_xp", JSON.stringify(xpState)), [xpState]);
+
+  const [claimedRewards, setClaimedRewards] = useState(() => { try { const s = localStorage.getItem("bebi_claims"); return s ? JSON.parse(s) : []; } catch { return []; } });
+  useEffect(() => localStorage.setItem("bebi_claims", JSON.stringify(claimedRewards)), [claimedRewards]);
 
   const [toast, setToast] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [lastSet, setLastSet] = useState(null);
-  const [activeProgramId, setActiveProgramId] = useState(PROGRAMS?.[0]?.id || null);
+  const [activeProgramId, setActiveProgramId] = useState(PROGRAMS[0].id);
   const [dayIndex, setDayIndex] = useState(0);
-  const [claimedRewards, setClaimedRewards] = useState([]);
 
-  const { mood, bumpMood } = useBebiMood?.() || { mood: "idle", bumpMood: () => {} };
+  const { mood, bumpMood } = useBebiMood();
 
   function showToastMsg(title, subtitle) {
     setToast({ title, subtitle });
     setTimeout(() => setToast(null), 2600);
   }
 
-  // recompute XP/boss/pr from logs
-  const { xp, battleTier, bosses, prMap } = useMemo(() => recomputeFromLogs(logs, profile), [logs, profile.weight]);
+  // Derived: recompute xp/pr/bosses from logs (pure recompute for safety)
+  const recomputed = useMemo(() => recomputeFromLogs(logs, profile), [logs, profile.weight]);
+  const { xp, battleTier, prMap } = recomputed;
+  // We keep xpState separate only to persist manual xp adjustments; sync here so UI uses recomputed xp
+  useEffect(() => setXpState(xp), [xp]);
 
-  // muscle stats derived from logs + profile
-  const muscleStats = useMemo(() => computeMuscleStatsFromLogs(logs, profile), [logs, profile.weight]);
+  // muscle stats built from PR map
+  const muscleStats = useMemo(() => computeMuscleStatsFromPRMap(prMap, profile), [prMap, profile.weight]);
   const comparisonData = useMemo(() => buildComparisonChartData(muscleStats), [muscleStats]);
 
-  // unlocked achievements (simple example)
+  // Achievements (simple)
   const unlockedAchievements = useMemo(() => {
     const arr = [];
-    if (logs.length >= 1) arr.push({ id: "ach_first", title: "Första passet! 💖", desc: "Du loggade ditt första pass.", emoji: "🎉" });
+    if (logs.length >= 1) arr.push({ id: "ach_first", title: "Första passet!", desc: "Du loggade ditt första pass.", emoji: "🎉" });
     if (logs.length >= 5) arr.push({ id: "ach_5_logs", title: "Consistency Bebi", desc: "Minst 5 loggade pass.", emoji: "📅" });
-    const glute = muscleStats.glutes;
-    if (glute && glute.levelKey === "Elite") arr.push({ id: "ach_glute_elite", title: "Glute Queen", desc: "Elite på glutes – Glute Dragon darrar.", emoji: "🍑" });
+    const glute = muscleStats.glutes; if (glute && glute.levelKey === "Elite") arr.push({ id: "ach_glute_elite", title: "Glute Queen", desc: "Elite på glutes", emoji: "🍑" });
     return arr;
   }, [logs, muscleStats]);
 
@@ -230,13 +313,7 @@ export default function App() {
 
   function handleSaveSet(entry) {
     const today = new Date().toISOString().slice(0, 10);
-    const finalEntry = {
-      ...entry,
-      id: crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
-      date: entry.date || today,
-    };
-
-    // PR-check quickly
+    const finalEntry = { ...entry, id: uid(), date: entry.date || today };
     const previousForExercise = logs.filter((l) => l.exerciseId === finalEntry.exerciseId);
     const prevBest = previousForExercise.length ? Math.max(...previousForExercise.map((l) => calc1RM(l.weight, l.reps))) : 0;
     const this1RM = calc1RM(finalEntry.weight, finalEntry.reps);
@@ -245,22 +322,40 @@ export default function App() {
     setLogs((prev) => [finalEntry, ...prev]);
     setLastSet(finalEntry);
 
+    // Apply boss damage persistently
+    setBosses((prev) => applyBossDamageToState(prev, finalEntry, this1RM, isPR));
+
     if (isPR) {
-      bumpMood?.("pr");
-      showToastMsg("OMG BEBI!! NYTT PR!!! 🔥💖", "Du är helt magisk, jag svär.");
+      bumpMood("pr");
+      showToastMsg("OMG BEBI!! NYTT PR!!! 🔥💖", "Du är helt magisk.");
+    } else if (lastSet && finalEntry.exerciseId === lastSet.exerciseId && finalEntry.weight >= (lastSet.weight || 0) * 1.1) {
+      bumpMood("heavy_set");
+      showToastMsg("Starkiii set! 💪", "Du tog i extra hårt nyss!");
     } else {
       showToastMsg("Set sparat 💪", "Bebi, du blev precis lite starkare.");
     }
 
     setShowModal(false);
-    // Auto-close mobile drawer if open
-    setMobileMenuOpen(false);
   }
 
   function handleDeleteLog(id) {
+    if (!confirm("Är du säker? Vill du ta bort detta set permanent?")) return;
     const newLogs = logs.filter((l) => l.id !== id);
     setLogs(newLogs);
-    showToastMsg("Logg borttagen 🗑️", "Statistik & muskelkarta har uppdaterats.");
+    // recompute bosses & xp by recomputeFromLogs
+    const recalced = recomputeFromLogs(newLogs, profile);
+    setBosses(recalced.bosses);
+    setXpState(recalced.xp);
+    showToastMsg("Logg borttagen 🗑️", "Statistik uppdaterad.");
+  }
+
+  function handleDeleteMeasurement(key, id) {
+    if (!confirm("Ta bort detta mätvärde?")) return;
+    setBodyStats((prev) => {
+      const arr = prev[key] || [];
+      return { ...prev, [key]: arr.filter((m) => m.id !== id) };
+    });
+    showToastMsg("Mätvärde borttaget", "");
   }
 
   function handleAddMeasurement(key, entry) {
@@ -268,211 +363,186 @@ export default function App() {
       const arr = prev[key] || [];
       return { ...prev, [key]: [...arr, entry] };
     });
+    showToastMsg("Mätvärde sparat", "");
   }
 
-  function handleDeleteMeasurement(key, id) {
-    setBodyStats((prev) => {
-      const arr = prev[key] || [];
-      return { ...prev, [key]: arr.filter((m) => m.id !== id) };
-    });
-  }
+  function handleSelectProgram(id) { setActiveProgramId(id); setDayIndex(0); bumpMood("start_program"); }
+  function handleNextDay() { const prog = PROGRAMS.find((p) => p.id === activeProgramId) || PROGRAMS[0]; if (!prog) return; setDayIndex((d) => (d + 1) % prog.days.length); }
+  function handleClaimReward(id) { if (claimedRewards.includes(id)) return; setClaimedRewards((p) => [...p, id]); showToastMsg("Reward klaimad 🎁", "Nice!"); }
 
-  function handleSelectProgram(id) {
-    setActiveProgramId(id);
-    setDayIndex(0);
-  }
-
-  function handleNextDay() {
-    const prog = PROGRAMS.find((p) => p.id === activeProgramId) || PROGRAMS[0];
-    if (!prog) return;
-    const next = (dayIndex + 1) % prog.days.length;
-    setDayIndex(next);
-  }
+  // small mobile/desktop UI helpers
+  function openMobileMenu() { setMobileMenuOpen(true); }
+  function closeMobileMenu() { setMobileMenuOpen(false); }
 
   return (
     <div className="app-shell">
       {toast && <Toast title={toast.title} subtitle={toast.subtitle} />}
 
-      {/* Desktop sidebar (hidden on small screens via CSS) */}
+      {/* Sidebar for desktop */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <BebiAvatar size={44} mood={mood} avatar={profile.avatar} />
-            <div>
-              <div className="sidebar-title">Bebi Gym</div>
-              <div className="sidebar-sub">För {profile.name}</div>
-            </div>
+          <BebiAvatar size={46} mood={mood} />
+          <div style={{ marginLeft: 10 }}>
+            <div className="sidebar-title">Bebi Gym v17</div>
+            <div className="sidebar-sub">För {profile.name} 💗</div>
           </div>
         </div>
 
-        <nav className="sidebar-nav">
-          <button className={`sidebar-link ${view === "dashboard" ? "active" : ""}`} onClick={() => setView("dashboard")}>
-            <span className="icon">🏠</span><span>Dashboard</span>
-          </button>
-          <button className={`sidebar-link ${view === "log" ? "active" : ""}`} onClick={() => setView("log")}>
-            <span className="icon">📓</span><span>Logga</span>
-          </button>
-          <button className={`sidebar-link ${view === "program" ? "active" : ""}`} onClick={() => setView("program")}>
-            <span className="icon">📅</span><span>Program</span>
-          </button>
-          <button className={`sidebar-link ${view === "boss" ? "active" : ""}`} onClick={() => setView("boss")}>
-            <span className="icon">🐲</span><span>Boss</span>
-          </button>
-          <button className={`sidebar-link ${view === "lift" ? "active" : ""}`} onClick={() => setView("lift")}>
-            <span className="icon">📈</span><span>Lift Tools</span>
-          </button>
-          <button className={`sidebar-link ${view === "ach" ? "active" : ""}`} onClick={() => setView("ach")}>
-            <span className="icon">🏅</span><span>Achievements</span>
-          </button>
-          <button className={`sidebar-link ${view === "pr" ? "active" : ""}`} onClick={() => setView("pr")}>
-            <span className="icon">🏆</span><span>PR</span>
-          </button>
-          <button className={`sidebar-link ${view === "profile" ? "active" : ""}`} onClick={() => setView("profile")}>
-            <span className="icon">👤</span><span>Profil</span>
-          </button>
-        </nav>
+        <div className="sidebar-nav">
+          <button className={`sidebar-link ${view === "dashboard" ? "active" : ""}`} onClick={() => setView("dashboard")}>🏠 Dashboard</button>
+          <button className={`sidebar-link ${view === "log" ? "active" : ""}`} onClick={() => setView("log")}>📓 Logga pass</button>
+          <button className={`sidebar-link ${view === "program" ? "active" : ""}`} onClick={() => setView("program")}>📅 Program</button>
+          <button className={`sidebar-link ${view === "boss" ? "active" : ""}`} onClick={() => setView("boss")}>🐲 Boss Raid</button>
+          <button className={`sidebar-link ${view === "lift" ? "active" : ""}`} onClick={() => setView("lift")}>📈 Lift Tools</button>
+          <button className={`sidebar-link ${view === "ach" ? "active" : ""}`} onClick={() => setView("ach")}>🏅 Achievements</button>
+          <button className={`sidebar-link ${view === "pr" ? "active" : ""}`} onClick={() => setView("pr")}>🏆 PR-lista</button>
+          <button className={`sidebar-link ${view === "profile" ? "active" : ""}`} onClick={() => setView("profile")}>👤 Profil</button>
+        </div>
 
-        <div className="sidebar-footer">
-          <div className="tiny"> {profile.height} cm • {profile.weight} kg • {profile.age} år </div>
+        <div style={{ marginTop: "auto", fontSize: 11, color: "#9ca3af" }}>
+          <div>{profile.name}</div>
+          <div>{profile.height} cm • {profile.weight} kg • {profile.age} år</div>
         </div>
       </aside>
 
-      {/* Mobile drawer (hamburger triggers) */}
+      {/* Mobile drawer */}
       <div className={`mobile-drawer ${mobileMenuOpen ? "open" : ""}`}>
         <div className="drawer-header">
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <BebiAvatar size={36} mood={mood} avatar={profile.avatar} />
-            <strong>Bebi Gym</strong>
-          </div>
-          <button className="close-btn" onClick={() => setMobileMenuOpen(false)}>×</button>
+          <div><strong>Bebi Gym</strong></div>
+          <button className="close-btn" onClick={closeMobileMenu}>×</button>
         </div>
         <div className="drawer-links">
-          <button onClick={() => { setView("dashboard"); setMobileMenuOpen(false); }}>🏠 Dashboard</button>
-          <button onClick={() => { setView("log"); setMobileMenuOpen(false); }}>📓 Logga</button>
-          <button onClick={() => { setView("program"); setMobileMenuOpen(false); }}>📅 Program</button>
-          <button onClick={() => { setView("boss"); setMobileMenuOpen(false); }}>🐲 Boss</button>
-          <button onClick={() => { setView("lift"); setMobileMenuOpen(false); }}>📈 Lift Tools</button>
-          <button onClick={() => { setView("ach"); setMobileMenuOpen(false); }}>🏅 Achievements</button>
-          <button onClick={() => { setView("pr"); setMobileMenuOpen(false); }}>🏆 PR</button>
-          <button onClick={() => { setView("profile"); setMobileMenuOpen(false); }}>👤 Profil</button>
+          <button onClick={() => { setView("dashboard"); closeMobileMenu(); }}>🏠 Dashboard</button>
+          <button onClick={() => { setView("log"); closeMobileMenu(); }}>📓 Logga pass</button>
+          <button onClick={() => { setView("program"); closeMobileMenu(); }}>📅 Program</button>
+          <button onClick={() => { setView("boss"); closeMobileMenu(); }}>🐲 Boss Raid</button>
+          <button onClick={() => { setView("lift"); closeMobileMenu(); }}>📈 Lift Tools</button>
+          <button onClick={() => { setView("ach"); closeMobileMenu(); }}>🏅 Achievements</button>
+          <button onClick={() => { setView("pr"); closeMobileMenu(); }}>🏆 PR-lista</button>
+          <button onClick={() => { setView("profile"); closeMobileMenu(); }}>👤 Profil</button>
         </div>
       </div>
 
-      {/* Main content */}
+      {/* Main */}
       <main className="main">
         <div className="main-header">
-          <div className="left-controls">
-            <button className="hamburger-btn" onClick={() => setMobileMenuOpen(true)}>☰</button>
-            <div>
-              <div className="main-title">Hej {profile.nick} 💖</div>
-              <div className="main-sub">Varje set skadar bossar, ger XP & bygger PR.</div>
-            </div>
+          <button className="hamburger-btn" onClick={openMobileMenu}>☰</button>
+          <div>
+            <div className="main-title">Hej {profile.nick}! 💖</div>
+            <div className="main-sub">Idag är en perfekt dag att bli starkare — logga ett set så händer magi ✨</div>
           </div>
-
-          <div className="right-controls">
-            <button className="btn btn-outline" onClick={() => { setView("profile"); }}>Profil</button>
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Logga set</button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div className="small" style={{ textAlign: "right" }}>{xpState} XP • Tier {battleTier}</div>
+            <button className="btn-pink" onClick={() => setShowModal(true)}>+ Logga set</button>
           </div>
         </div>
 
-        {/* CONTENT AREA */}
-        <div className="content-area">
-          {view === "dashboard" && (
-            <div className="grid-2col">
-              <div className="col-left">
-                <div className="card small card-glow">
-                  <div className="card-row-space">
-                    <div>
-                      <div className="muted">XP & Battle Tier</div>
-                      <div style={{ fontWeight: 700, fontSize: 18 }}>{xp} XP — Tier {battleTier}</div>
-                    </div>
-                    <div style={{ width: 180 }}>
-                      <div className="progress-wrap">
-                        <div className="progress-fill" style={{ width: `${Math.min(100, Math.round((xp / nextTierXp) * 100))}%` }} />
-                      </div>
-                      <div className="small muted">Nästa tier: {nextTierXp} XP</div>
-                    </div>
+        {/* CONTENT */}
+        {view === "dashboard" && (
+          <div className="row" style={{ alignItems: "flex-start" }}>
+            <div className="col" style={{ flex: 1, gap: 10 }}>
+              <div className="card small">
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>XP & Level</div>
+                    <div className="small">Du får XP för varje tungt set</div>
+                  </div>
+                  <div style={{ textAlign: "right", fontSize: 12 }}>
+                    <div>{xpState} XP</div>
+                    <div>Tier {battleTier}</div>
                   </div>
                 </div>
-
-                <div className="card">
-                  <MuscleMap muscleStats={muscleStats} />
+                <div className="progress-wrap" style={{ marginTop: 6 }}>
+                  <div className="progress-fill" style={{ width: `${Math.min(100, Math.round((xpState / nextTierXp) * 100))}%` }} />
                 </div>
-
-                <div className="card">
-                  <MuscleComparison data={comparisonData} />
-                </div>
+                <div className="small" style={{ marginTop: 4 }}>Nästa tier vid {nextTierXp} XP</div>
               </div>
 
-              <div className="col-right">
-                <div className="card">
-                  <BossArena bosses={bosses} />
-                </div>
+              {/* Cycle tracker card */}
+              <CycleTracker cycleData={cycleData} setCycleData={setCycleData} />
 
-                <div className="card">
-                  <BattlePass tier={battleTier} xp={xp} nextTierXp={nextTierXp} rewards={[]} onClaimReward={() => {}} claimedRewards={claimedRewards} />
-                </div>
+              <MuscleMap muscleStats={muscleStats} />
 
-                <div className="card small">
-                  <h4 style={{ margin: 0 }}>Snabbstatistik</h4>
-                  <div className="muted small">PRs, veckomissioner & troféer visas här.</div>
-                </div>
-              </div>
+              <div style={{ marginTop: 10 }}><MuscleComparison data={comparisonData} /></div>
             </div>
-          )}
 
-          {view === "log" && (
-            <div className="card">
-              <h3 style={{ marginTop: 0 }}>Loggade set</h3>
-              {!logs.length ? (
-                <p className="muted small">Inga set ännu — klicka "Logga set" för att börja.</p>
-              ) : (
-                <div className="log-list">
-                  {logs.map((l) => {
-                    const ex = EXERCISES.find((e) => e.id === l.exerciseId);
-                    return (
-                      <div key={l.id} className="log-row">
-                        <div>
-                          <div className="muted small">{l.date}</div>
-                          <div style={{ fontWeight: 700 }}>{ex?.name || l.exerciseId}</div>
-                          <div className="small muted">{l.weight} kg × {l.reps} reps • 1RM ≈ {calc1RM(l.weight, l.reps)} kg</div>
-                        </div>
-                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                          <button className="btn btn-ghost" onClick={() => navigator.clipboard?.writeText(JSON.stringify(l))}>📋</button>
-                          <button className="btn btn-danger" onClick={() => handleDeleteLog(l.id)}>🗑️</button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="col" style={{ flex: 1, gap: 10 }}>
+              <BossArena bosses={bosses} />
+              <BattlePass
+                tier={battleTier}
+                xp={xpState}
+                nextTierXp={nextTierXp}
+                rewards={BATTLE_REWARDS}
+                claimedRewards={claimedRewards}
+                onClaimReward={handleClaimReward}
+              />
             </div>
-          )}
+          </div>
+        )}
 
-          {view === "program" && (
-            <ProgramRunner programs={PROGRAMS} activeProgramId={activeProgramId} dayIndex={dayIndex} onSelectProgram={handleSelectProgram} onNextDay={handleNextDay} logs={logs} />
-          )}
+        {view === "log" && (
+          <div className="card">
+            <h3 style={{ marginTop: 0 }}>Loggade set 📓</h3>
+            {!logs.length && <p className="small">Inga set än — klicka på "Logga set" för att börja.</p>}
+            <ul style={{ paddingLeft: 0, listStyle: "none", margin: 0, marginTop: 6 }}>
+              {logs.map((l) => {
+                const ex = EXERCISES.find((e) => e.id === l.exerciseId);
+                return (
+                  <li key={l.id} style={{ fontSize: 12, marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px", borderRadius: 8, background: "rgba(15,23,42,0.9)", border: "1px solid rgba(148,163,184,0.4)" }}>
+                    <div>
+                      {l.date} • {ex?.name || l.exerciseId} • {l.weight} kg × {l.reps} reps (1RM ca {calc1RM(l.weight, l.reps)} kg)
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn" onClick={() => { /* future: edit */ }}>✏️</button>
+                      <button className="btn" onClick={() => handleDeleteLog(l.id)}>🗑️</button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
-          {view === "boss" && (
-            <div className="card">
+        {view === "program" && (
+          <ProgramRunner programs={PROGRAMS} activeProgramId={activeProgramId} dayIndex={dayIndex} onSelectProgram={handleSelectProgram} onNextDay={handleNextDay} logs={logs} />
+        )}
+
+        {view === "boss" && (
+          <div className="row" style={{ gap: 10 }}>
+            <div className="col" style={{ flex: 2, gap: 10 }}>
               <BossArena bosses={bosses} />
             </div>
-          )}
-
-          {view === "lift" && (
-            <div className="card">
-              <LiftTools logs={logs} bodyStats={bodyStats} onAddManual={(entry) => setLogs((p) => [entry, ...p])} />
+            <div className="col" style={{ flex: 1, gap: 10 }}>
+              <div className="card">
+                <h3 style={{ marginTop: 0 }}>Hur funkar raid? 🐉</h3>
+                <p className="small">PR ger extra damage och triggar Rage-avatarläge. Attack sker automatiskt när du loggar set.</p>
+              </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {view === "ach" && <Achievements unlocked={unlockedAchievements} />}
+        {view === "lift" && (
+          <div className="card" style={{ padding: 20 }}>
+            <div className="main-header" style={{ marginBottom: 10 }}>
+              <div><div className="main-title">Lift Tools 🛠️</div><div className="main-sub">1RM, volym, grafer & kroppsmått</div></div>
+            </div>
+            <LiftTools logs={logs} bodyStats={bodyStats} onAddManual={(entry) => { setLogs((prev) => [entry, ...prev]); showToastMsg("Lyft tillagt", "Sparat."); }} />
+          </div>
+        )}
 
-          {view === "pr" && <PRList prMap={prMap} />}
+        {view === "ach" && <Achievements unlocked={unlockedAchievements} />}
 
-          {view === "profile" && (
-            <ProfileView profile={profile} setProfile={setProfile} bodyStats={bodyStats} onAddMeasurement={handleAddMeasurement} onDeleteMeasurement={handleDeleteMeasurement} />
-          )}
-        </div>
+        {view === "pr" && <PRList prMap={prMap} />}
+
+        {view === "profile" && (
+          <ProfileView
+            profile={profile}
+            setProfile={setProfile}
+            bodyStats={bodyStats}
+            onAddMeasurement={(key, entry) => handleAddMeasurement(key, entry)}
+            onDeleteMeasurement={(key, id) => handleDeleteMeasurement(key, id)}
+          />
+        )}
       </main>
 
       <LogModal open={showModal} onClose={() => setShowModal(false)} onSave={handleSaveSet} lastSet={lastSet} />

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import BodyStatsChart from "./BodyStatsChart.jsx";
 
 export default function ProfileView({
   profile,

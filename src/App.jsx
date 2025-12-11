@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import "./src/index.css";
+import "./index.css";
 
 import ProfileView from "./components/ProfileView.jsx";
 import LiftTools from "./components/LiftTools.jsx";

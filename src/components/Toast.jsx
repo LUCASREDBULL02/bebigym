@@ -1,30 +1,30 @@
-import React from 'react'
+// src/components/Toast.jsx
+import React from "react";
 
 export default function Toast({ title, subtitle }) {
-  if (!title) return null
   return (
-    <div className="toast-root">
-      <div
-        style={{
-          minWidth: 260,
-          maxWidth: 360,
-          borderRadius: 16,
-          padding: '10px 14px',
-          background:
-            'linear-gradient(135deg, rgba(236,72,153,0.96), rgba(129,140,248,0.95))',
-          boxShadow: '0 18px 40px rgba(15,23,42,0.8)',
-          color: 'white',
-          border: '1px solid rgba(248,250,252,0.9)',
-        }}
-      >
-        <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', gap: 6 }}>
-          <span>✨</span>
-          <span>{title}</span>
-        </div>
-        {subtitle && (
-          <div style={{ fontSize: 11, marginTop: 2, opacity: 0.9 }}>{subtitle}</div>
-        )}
-      </div>
+    <div
+      style={{
+        position: "fixed",
+        top: "20px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        background: "rgba(255, 110, 161, 0.22)",
+        backdropFilter: "blur(12px) saturate(140%)",
+        padding: "12px 20px",
+        borderRadius: "14px",
+        boxShadow: "0 8px 26px rgba(0,0,0,0.35)",
+        zIndex: 200,
+        color: "white",
+        fontSize: 14,
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        animation: "fadeIn .25s ease",
+      }}
+    >
+      <strong style={{ fontSize: 15 }}>{title}</strong>
+      {subtitle && <span style={{ opacity: 0.8 }}>{subtitle}</span>}
     </div>
-  )
+  );
 }

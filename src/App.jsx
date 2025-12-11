@@ -12,6 +12,9 @@ import ProgramRunner from "./components/ProgramRunner.jsx";
 import PRList from "./components/PRList.jsx";
 import MuscleComparison from "./components/MuscleComparison.jsx";
 import LiftTools from "./components/LiftTools.jsx";
+import Dashboard from "./components/Dashboard.jsx";
+import PRPage from "./components/PRPage.jsx";
+import CycleCalendar from "./components/CycleCalendar.jsx";
 
 // ---------------- DATA ----------------
 import { buildComparisonChartData } from "./utils/comparisonData.js";

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import BodyMeasurementChart from "./BodyMeasurementChart";
 
 export default function ProfileView({
   profile,
@@ -8,8 +7,6 @@ export default function ProfileView({
   onAddMeasurement,
   onDeleteMeasurement,
 }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
-
   const [form, setForm] = useState({
     name: profile.name,
     nick: profile.nick,
@@ -17,6 +14,8 @@ export default function ProfileView({
     height: profile.height,
     weight: profile.weight,
   });
+
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const [newMeasurement, setNewMeasurement] = useState({
     key: "waist",
@@ -36,7 +35,8 @@ export default function ProfileView({
   function handleSaveProfile() {
     setProfile({
       ...profile,
-      ...form,
+      name: form.name,
+      nick: form.nick,
       age: Number(form.age),
       height: Number(form.height),
       weight: Number(form.weight),
@@ -45,42 +45,67 @@ export default function ProfileView({
 
   function handleAddMeasurement() {
     if (!newMeasurement.value) return;
-
     const entry = {
       id: crypto.randomUUID(),
-      date: newMeasurement.date,
+      date: newMeasurement.date || todayStr,
       value: Number(newMeasurement.value),
     };
-
     onAddMeasurement(newMeasurement.key, entry);
 
     setNewMeasurement((prev) => ({ ...prev, value: "" }));
   }
 
-  function getSummary(list) {
+  function MeasurementSparkline({ list }) {
     if (!list || list.length < 2) return null;
 
     const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
+    const values = sorted.map((m) => m.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+
+    const width = 120;
+    const height = 36;
+
+    const points = sorted
+      .map((m, i) => {
+        const x =
+          sorted.length === 1 ? width / 2 : (i / (sorted.length - 1)) * width;
+        const y = height - ((m.value - min) / span) * height;
+        return `${x},${y}`;
+      })
+      .join(" ");
+
+    return (
+      <svg className="measure-sparkline" viewBox={`0 0 ${width} ${height}`}>
+        <polyline
+          fill="none"
+          stroke="var(--pink)"
+          strokeWidth="2.5"
+          points={points}
+        />
+      </svg>
+    );
+  }
+
+  function getSummary(list) {
+    if (!list || list.length === 0) return null;
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
     const first = sorted[0];
     const last = sorted[sorted.length - 1];
-
-    return {
-      change: (last.value - first.value).toFixed(1),
-      first,
-      last,
-    };
+    const diff = last.value - first.value;
+    return { first, last, diff };
   }
 
   return (
     <div className="profile-page">
+      <h2 className="profile-header">👤 Din profil & kroppsmått</h2>
 
-      {/* HEADER */}
-      <h2 className="profile-header">👤 Din profil & utveckling</h2>
-
-      {/* --- PROFILKORT --- */}
+      {/* ------------------ PROFILKORT ------------------ */}
       <div className="profile-card">
         <h3 className="section-title">🧸 Grundinfo</h3>
 
+        {/* Namn */}
         <div className="input-group">
           <label>Namn</label>
           <input
@@ -89,6 +114,7 @@ export default function ProfileView({
           />
         </div>
 
+        {/* Smeknamn */}
         <div className="input-group">
           <label>Smeknamn</label>
           <input
@@ -97,6 +123,7 @@ export default function ProfileView({
           />
         </div>
 
+        {/* Grid */}
         <div className="profile-grid">
           <div className="input-group">
             <label>Ålder</label>
@@ -126,24 +153,27 @@ export default function ProfileView({
           </div>
         </div>
 
-        <button className="btn-save" onClick={handleSaveProfile}>
+        <button className="btn-pink" style={{ width: "100%", marginTop: 10 }} onClick={handleSaveProfile}>
           💾 Spara profil
         </button>
       </div>
 
-      {/* --- KROPPSMÅTT --- */}
+      {/* ------------------ KROPPSMÅTT ------------------ */}
       <div className="profile-card">
-        <h3 className="section-title">📏 Kroppsmått</h3>
+        <h3 className="section-title">📏 Kroppsmått & utveckling</h3>
 
+        {/* Add new measurement */}
         <div className="measurement-add">
           <select
             value={newMeasurement.key}
             onChange={(e) =>
-              setNewMeasurement({ ...newMeasurement, key: e.target.value })
+              setNewMeasurement((prev) => ({ ...prev, key: e.target.value }))
             }
           >
             {Object.entries(measurementLabels).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
+              <option key={key} value={key}>
+                {label}
+              </option>
             ))}
           </select>
 
@@ -152,7 +182,7 @@ export default function ProfileView({
             placeholder="cm"
             value={newMeasurement.value}
             onChange={(e) =>
-              setNewMeasurement({ ...newMeasurement, value: e.target.value })
+              setNewMeasurement((prev) => ({ ...prev, value: e.target.value }))
             }
           />
 
@@ -160,66 +190,68 @@ export default function ProfileView({
             type="date"
             value={newMeasurement.date}
             onChange={(e) =>
-              setNewMeasurement({ ...newMeasurement, date: e.target.value })
+              setNewMeasurement((prev) => ({ ...prev, date: e.target.value }))
             }
           />
 
-          <button className="btn-add" onClick={handleAddMeasurement}>
+          <button className="btn-pink" style={{ padding: "0 14px" }} onClick={handleAddMeasurement}>
             ➕
           </button>
         </div>
 
-        {/* LOOPA ALLA MÅTT */}
+        {/* Measurements */}
         {Object.entries(bodyStats).map(([key, list]) => {
           const summary = getSummary(list);
 
           return (
             <div key={key} className="measure-block">
-              <h4 className="measure-title">
-                {measurementLabels[key]}
-              </h4>
-
-              {summary ? (
-                <p className="measure-meta">
-                  Senaste: <b>{summary.last.value} cm</b>  
-                  ({summary.last.date})  
-                  • Förändring: <b>{summary.change} cm</b>
-                </p>
-              ) : (
-                <p className="measure-meta">Inga värden ännu ✨</p>
-              )}
-
-              {/* Full graf */}
-              <BodyMeasurementChart
-                list={list}
-                label={measurementLabels[key]}
-              />
-
-              {/* Lista */}
-              <div className="measure-list">
-                {list
-                  .slice()
-                  .sort((a, b) => b.date.localeCompare(a.date))
-                  .map((m) => (
-                    <div key={m.id} className="measure-item">
-                      <span>
-                        {m.date}: <b>{m.value} cm</b>
-                      </span>
-                      <button
-                        className="delete-btn"
-                        onClick={() => onDeleteMeasurement(key, m.id)}
-                      >
-                        🗑️
-                      </button>
+              <div className="measure-header-row">
+                <div>
+                  <h4 className="measure-title">{measurementLabels[key]}</h4>
+                  {summary ? (
+                    <div className="measure-meta">
+                      Senast: <strong>{summary.last.value} cm</strong> ({summary.last.date}) •{" "}
+                      <strong>
+                        {summary.diff > 0 ? "+" : ""}
+                        {summary.diff.toFixed(1)} cm
+                      </strong>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="measure-meta">
+                      Inga värden ännu – lägg till första måttet ✨
+                    </div>
+                  )}
+                </div>
+
+                {/* sparkline */}
+                <MeasurementSparkline list={list} />
               </div>
 
+              {/* list */}
+              {list.length > 0 && (
+                <div className="measure-list">
+                  {list
+                    .slice()
+                    .sort((a, b) => b.date.localeCompare(a.date))
+                    .map((m) => (
+                      <div key={m.id} className="measure-item">
+                        <span>
+                          {m.date}: <strong>{m.value} cm</strong>
+                        </span>
+                        <button
+                          className="delete-btn"
+                          onClick={() => onDeleteMeasurement(key, m.id)}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-
     </div>
   );
 }

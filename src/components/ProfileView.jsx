@@ -1,196 +1,128 @@
 // src/components/ProfileView.jsx
-import React, { useMemo, useState } from "react";
-
-function SparklineAll({ bodyStats }) {
-  // Combine keys into same timeline (simple overlay)
-  const keys = Object.keys(bodyStats);
-  const allPoints = {};
-  keys.forEach((k) => {
-    (bodyStats[k] || []).forEach((m) => {
-      allPoints[m.date] = allPoints[m.date] || {};
-      allPoints[m.date][k] = m.value;
-    });
-  });
-
-  const dates = Object.keys(allPoints).sort();
-  if (dates.length < 2) return null;
-
-  // Normalize values per metric to fit same chart area
-  const width = 720;
-  const height = 180;
-  const padding = 20;
-
-  const series = keys.map((k) => {
-    const values = dates.map((d) => (allPoints[d][k] !== undefined ? allPoints[d][k] : null));
-    const numeric = values.filter((v) => v !== null);
-    const min = numeric.length ? Math.min(...numeric) : 0;
-    const max = numeric.length ? Math.max(...numeric) : min + 1;
-    return { key: k, values, min, max };
-  });
-
-  const colors = ["#ff6ea1", "#ffb6d5", "#ffd6e0", "#f9c2ff", "#ffd7a8", "#bfe7ff"];
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: 200 }}>
-      <rect fill="transparent" x="0" y="0" width={width} height={height} rx="12" />
-      {series.map((s, idx) => {
-        const points = s.values.map((v, i) => {
-          const x = padding + (i / Math.max(1, dates.length - 1)) * (width - padding * 2);
-          const y = v === null ? height - padding : padding + ((s.max - v) / (s.max - s.min || 1)) * (height - padding * 2);
-          return `${x},${y}`;
-        });
-        return (
-          <polyline
-            key={s.key}
-            fill="none"
-            stroke={colors[idx % colors.length]}
-            strokeWidth={2.2}
-            points={points.join(" ")}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            opacity={0.95}
-          />
-        );
-      })}
-    </svg>
-  );
-}
+import React, { useState, useEffect } from "react";
 
 export default function ProfileView({ profile, setProfile, bodyStats, onAddMeasurement, onDeleteMeasurement }) {
-  const [form, setForm] = useState({
-    name: profile.name || "",
-    nick: profile.nick || "",
-    age: profile.age || "",
-    height: profile.height || "",
-    weight: profile.weight || "",
-  });
+  const [form, setForm] = useState({ name: profile.name, nick: profile.nick, age:profile.age, height:profile.height, weight:profile.weight });
+  useEffect(()=> setForm({ name: profile.name, nick: profile.nick, age:profile.age, height:profile.height, weight:profile.weight }), [profile]);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const [newMeasurement, setNewMeasurement] = useState({ key: "waist", value: "", date: todayStr });
+  const today = new Date().toISOString().slice(0,10);
+  const [measurement, setMeasurement] = useState({ key:"waist", value:"", date:today });
 
-  const labels = { waist: "Midja", hips: "Höfter", thigh: "Lår", glutes: "Glutes", chest: "Bröst", arm: "Arm" };
+  const labels = { waist:"Midja", hips:"Höfter", thigh:"Lår", glutes:"Glutes", chest:"Bröst", arm:"Arm" };
 
-  function handleSaveProfile() {
+  function saveProfile(){
     setProfile({ ...profile, name: form.name, nick: form.nick, age: Number(form.age), height: Number(form.height), weight: Number(form.weight) });
   }
 
-  function handleAddMeasurement() {
-    if (!newMeasurement.value) return;
-    const entry = { id: crypto.randomUUID?.() || Math.random().toString(36).slice(2), date: newMeasurement.date || todayStr, value: Number(newMeasurement.value) };
-    onAddMeasurement(newMeasurement.key, entry);
-    setNewMeasurement((p) => ({ ...p, value: "" }));
+  function addMeasurement(){
+    if(!measurement.value) return;
+    const entry = { id: crypto.randomUUID?.() || Math.random().toString(36).slice(2), date: measurement.date, value: Number(measurement.value) };
+    onAddMeasurement(measurement.key, entry);
+    setMeasurement(prev=>({...prev, value:""}));
   }
 
-  const hasAnyMeasurements = Object.values(bodyStats).some((arr) => (arr || []).length > 0);
+  function MeasurementSpark({list}) {
+    if(!list || list.length < 2) return <div style={{opacity:0.7}}>För få datapunkter</div>;
+    const sorted = [...list].sort((a,b)=>a.date.localeCompare(b.date));
+    const vals = sorted.map(s=>s.value);
+    const min = Math.min(...vals), max = Math.max(...vals), span = max-min || 1;
+    const w=160,h=40;
+    const pts = sorted.map((m,i)=> {
+      const x = (i/(sorted.length-1))*w;
+      const y = h - ((m.value-min)/span)*h;
+      return `${x},${y}`;
+    }).join(" ");
+    return <svg width={w} height={h}><polyline points={pts} fill="none" stroke="#ff6ea1" strokeWidth="2" /></svg>
+  }
 
   return (
     <div className="profile-page">
-      <h2 className="profile-header">👤 Din profil & kroppsmått</h2>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <h2 className="profile-header">👤 Din profil</h2>
+        <div style={{ fontSize:12, color:"var(--muted)" }}>Senast sparad: {profile.name}</div>
+      </div>
 
       <div className="profile-card">
-        <h3 className="section-title">🧸 Grundinfo</h3>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <div style={{ flex: 1 }}>
-            <div className="input-group">
-              <label>Namn</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div className="input-group">
-              <label>Smeknamn</label>
-              <input value={form.nick} onChange={(e) => setForm({ ...form, nick: e.target.value })} />
-            </div>
+        <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+          <div style={{ width:86, height:86, borderRadius:18, background:"linear-gradient(90deg,#ffd6e0,#ff9bbd)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:28 }}>
+            {profile.nick?.[0] || "B"}
           </div>
 
-          <div style={{ width: 160, textAlign: "right" }}>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>Profil</div>
-            <div style={{ fontWeight: 700 }}>{profile.nick}</div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>{profile.height} cm • {profile.weight} kg</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:700, fontSize:16 }}>{profile.name}</div>
+            <div className="small" style={{ marginTop:6 }}>Ålder {profile.age} • {profile.height} cm • {profile.weight} kg</div>
           </div>
         </div>
 
-        <div className="profile-grid" style={{ marginTop: 8 }}>
+        <div style={{ marginTop:10 }}>
           <div className="input-group">
-            <label>Ålder</label>
-            <input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
+            <label>Namn</label>
+            <input value={form.name} onChange={e=>setForm({...form, name: e.target.value})} />
           </div>
           <div className="input-group">
-            <label>Längd (cm)</label>
-            <input type="number" value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} />
+            <label>Smeknamn</label>
+            <input value={form.nick} onChange={e=>setForm({...form, nick: e.target.value})} />
           </div>
-          <div className="input-group">
-            <label>Vikt (kg)</label>
-            <input type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} />
-          </div>
-        </div>
 
-        <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
-          <button className="btn-save" onClick={handleSaveProfile}>💾 Spara profil</button>
+          <div className="profile-grid" style={{ marginTop:8 }}>
+            <div className="input-group"><label>Ålder</label><input type="number" value={form.age} onChange={e=>setForm({...form, age:e.target.value})} /></div>
+            <div className="input-group"><label>Längd (cm)</label><input type="number" value={form.height} onChange={e=>setForm({...form, height:e.target.value})} /></div>
+            <div className="input-group"><label>Vikt (kg)</label><input type="number" value={form.weight} onChange={e=>setForm({...form, weight:e.target.value})} /></div>
+          </div>
+
+          <div style={{ marginTop:10, display:"flex", gap:8, justifyContent:"flex-end" }}>
+            <button className="btn" onClick={()=> setForm({ name:profile.name, nick:profile.nick, age:profile.age, height:profile.height, weight:profile.weight })}>Ångra</button>
+            <button className="btn-save" onClick={saveProfile}>💾 Spara profil</button>
+          </div>
         </div>
       </div>
 
       <div className="profile-card">
-        <h3 className="section-title">📏 Kroppsmått & utveckling</h3>
-
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-          <select value={newMeasurement.key} onChange={(e) => setNewMeasurement((p) => ({ ...p, key: e.target.value }))}>
-            {Object.entries(labels).map(([k, l]) => <option value={k} key={k}>{l}</option>)}
+        <h3 className="section-title">📏 Kroppsmått</h3>
+        <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:8 }}>
+          <select value={measurement.key} onChange={e=>setMeasurement(prev=>({...prev, key:e.target.value}))}>
+            {Object.entries(labels).map(([k,v])=> <option key={k} value={k}>{v}</option>)}
           </select>
-          <input type="number" placeholder="cm" value={newMeasurement.value} onChange={(e) => setNewMeasurement((p) => ({ ...p, value: e.target.value }))} />
-          <input type="date" value={newMeasurement.date} onChange={(e) => setNewMeasurement((p) => ({ ...p, date: e.target.value }))} />
-          <button className="btn-add btn-pink" style={{ padding: "8px 12px" }} onClick={handleAddMeasurement}>➕ Lägg till</button>
+          <input placeholder="cm" type="number" value={measurement.value} onChange={e=>setMeasurement(prev=>({...prev, value:e.target.value}))} />
+          <input type="date" value={measurement.date} onChange={e=>setMeasurement(prev=>({...prev, date:e.target.value}))} />
+          <button className="btn-add" onClick={addMeasurement}>➕</button>
         </div>
 
-        {hasAnyMeasurements ? (
-          <>
-            <div style={{ marginBottom: 8 }}>
-              <strong>Body Progress Dashboard</strong>
-              <div className="small">Alla mått över tid — jämför och följ utvecklingen.</div>
-            </div>
-
-            <div style={{ marginBottom: 12 }}>
-              <SparklineAll bodyStats={bodyStats} />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
-              {Object.entries(labels).map(([key, label]) => {
-                const list = (bodyStats[key] || []).slice().sort((a,b) => b.date.localeCompare(a.date));
-                const latest = list[0];
-                return (
-                  <div key={key} className="measure-block card small">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700 }}>{label}</div>
-                        <div className="small">{list.length} mätningar</div>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontWeight: 800, fontSize: 16 }}>{latest ? `${latest.value} cm` : "—"}</div>
-                        <div className="small">{latest ? latest.date : ""}</div>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: 8 }}>
-                      {list.length === 0 ? <div className="empty-text">Inga värden ännu</div> : (
-                        <div className="measure-list">
-                          {list.map((m) => (
-                            <div key={m.id} className="measure-item">
-                              <div>{m.date}: <strong>{m.value} cm</strong></div>
-                              <div>
-                                <button className="delete-btn" onClick={() => onDeleteMeasurement(key, m.id)}>🗑️</button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          {Object.entries(bodyStats).map(([k,arr])=>(
+            <div key={k} style={{ borderRadius:12, padding:10, background:"rgba(255,255,255,0.02)" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ fontWeight:700 }}>{labels[k] || k}</div>
+                <div className="small">{arr.length>0 ? arr.slice().sort((a,b)=>b.date.localeCompare(a.date))[0].value+" cm" : "—"}</div>
+              </div>
+              <MeasurementSpark list={arr} />
+              <div style={{ marginTop:8 }}>
+                {arr.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(m=>(
+                  <div key={m.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8, marginTop:6 }}>
+                    <div className="small">{m.date}</div>
+                    <div style={{ fontWeight:700 }}>{m.value} cm</div>
+                    <button className="delete-btn" onClick={()=>onDeleteMeasurement(k,m.id)}>🗑️</button>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </>
-        ) : (
-          <div className="empty-text">Inga registrerade kroppsmått ännu — lägg till ett ovan.</div>
-        )}
+          ))}
+        </div>
       </div>
     </div>
   );
+}
+
+function MeasurementSpark({list=[]}) {
+  if(!list || list.length < 2) return <div style={{ marginTop:8, fontSize:12, color:"var(--muted)" }}>För få datapunkter för graf</div>;
+  const sorted = [...list].sort((a,b)=>a.date.localeCompare(b.date));
+  const vals = sorted.map(s=>s.value);
+  const min = Math.min(...vals), max = Math.max(...vals), span = max-min || 1;
+  const w=220,h=48;
+  const pts = sorted.map((m,i)=> {
+    const x = (i/(sorted.length-1))*w;
+    const y = h - ((m.value-min)/span)*h;
+    return `${x},${y}`;
+  }).join(" ");
+  return <svg width={w} height={h}><polyline points={pts} fill="none" stroke="#ff6ea1" strokeWidth="2" /></svg>
 }

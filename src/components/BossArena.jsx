@@ -1,64 +1,83 @@
-import React from 'react'
-
-function getPhase(pctLeft) {
-  if (pctLeft > 70) return { phase: 1, label: 'Phase 1 – Chill 😼' }
-  if (pctLeft > 40) return { phase: 2, label: 'Phase 2 – Angry 😤' }
-  if (pctLeft > 0) return { phase: 3, label: 'Phase 3 – Rage 🔥' }
-  return { phase: 4, label: 'Nerplattad 💀' }
-}
-
-function BossCard({ boss }) {
-  const pctLeft = boss.maxHP ? Math.max(0, Math.round((boss.currentHP / boss.maxHP) * 100)) : 0
-  const pctDone = 100 - pctLeft
-  const { phase, label } = getPhase(pctLeft)
-
-  const barColor =
-    phase === 1 ? '#22c55e' : phase === 2 ? '#eab308' : phase === 3 ? '#ef4444' : '#6366f1'
-
-  return (
-    <div className="card small" style={{ marginTop: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>{boss.name}</div>
-        <div className="small">
-          HP {boss.currentHP} / {boss.maxHP}
-        </div>
-      </div>
-      <div className="progress-wrap">
-        <div
-          className="progress-fill"
-          style={{ width: `${pctDone}%`, background: barColor, transition: 'width 0.2s ease' }}
-        />
-      </div>
-      <div className="small" style={{ marginTop: 4 }}>
-        {label} • {pctDone}% skada gjord • Element: {boss.elemental}
-      </div>
-    </div>
-  )
-}
+// src/components/BossArena.jsx
+import React from "react";
 
 export default function BossArena({ bosses }) {
-  const list = Object.values(bosses)
-  const totalMax = list.reduce((s, b) => s + b.maxHP, 0)
-  const totalCurrent = list.reduce((s, b) => s + b.currentHP, 0)
-  const totalPct = totalMax ? Math.round(100 * (1 - totalCurrent / totalMax)) : 0
+  if (!bosses) return null;
+
+  function bar(pct) {
+    return (
+      <div
+        style={{
+          height: 10,
+          width: "100%",
+          borderRadius: 6,
+          background: "rgba(255,255,255,0.06)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${pct}%`,
+            background: "linear-gradient(90deg, #ff6ea1, #ff2f7c)",
+            transition: "0.3s",
+          }}
+        />
+      </div>
+    );
+  }
+
+  function BossCard({ boss }) {
+    const pct = Math.round((1 - boss.currentHP / boss.maxHP) * 100);
+
+    return (
+      <div
+        className="card"
+        style={{
+          padding: 18,
+          borderRadius: 16,
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        <div style={{ fontSize: 18, fontWeight: 700 }}>
+          {boss.label} {boss.emoji}
+        </div>
+
+        <div className="small">
+          HP: {boss.currentHP} / {boss.maxHP}
+        </div>
+
+        {bar(pct)}
+
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 13,
+            opacity: 0.7,
+          }}
+        >
+          {pct}% defeated
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="card">
-      <h3 style={{ marginTop: 0 }}>Boss Raid 🐲</h3>
-      <p className="small">
-        Bossarna tar skada automatiskt när Bebi loggar tunga set i rätt övningar. Ju högre 1RM,
-        desto mer damage 🔥
+    <div className="boss-arena">
+      <h3 style={{ marginTop: 0 }}>Boss Arena 🐲</h3>
+      <p className="small" style={{ marginBottom: 12 }}>
+        Logga tunga set för att skada bossarna!
       </p>
-      <div className="progress-wrap" style={{ marginTop: 6 }}>
-        <div className="progress-fill" style={{ width: `${totalPct}%` }} />
-      </div>
-      <div className="small" style={{ marginTop: 4 }}>
-        Totalt raid-progress: {totalPct}% av all boss-HP nedslagen.
-      </div>
 
-      {list.map((b) => (
-        <BossCard key={b.id} boss={b} />
-      ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <BossCard boss={bosses.chest} />
+        <BossCard boss={bosses.glute} />
+        <BossCard boss={bosses.back} />
+      </div>
     </div>
-  )
+  );
 }

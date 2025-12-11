@@ -1,30 +1,30 @@
 // src/components/Toast.jsx
-import React from "react";
+import React, { useEffect } from "react";
 
 export default function Toast({ title, subtitle }) {
+  useEffect(() => {
+    const t = setTimeout(() => {}, 2500);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: "20px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        background: "rgba(255, 110, 161, 0.22)",
-        backdropFilter: "blur(12px) saturate(140%)",
-        padding: "12px 20px",
-        borderRadius: "14px",
-        boxShadow: "0 8px 26px rgba(0,0,0,0.35)",
-        zIndex: 200,
+    <div style={{
+      position: "fixed",
+      right: 20,
+      bottom: 20,
+      zIndex: 120,
+      minWidth: 220,
+    }}>
+      <div style={{
+        background: "linear-gradient(90deg,#ff6ea1,#ff2f7c)",
         color: "white",
-        fontSize: 14,
-        display: "flex",
-        flexDirection: "column",
-        gap: 2,
-        animation: "fadeIn .25s ease",
-      }}
-    >
-      <strong style={{ fontSize: 15 }}>{title}</strong>
-      {subtitle && <span style={{ opacity: 0.8 }}>{subtitle}</span>}
+        padding: "10px 14px",
+        borderRadius: 12,
+        boxShadow: "0 10px 30px rgba(255,46,122,0.14)"
+      }}>
+        <div style={{ fontWeight: 700 }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 13, opacity: 0.95 }}>{subtitle}</div>}
+      </div>
     </div>
   );
 }

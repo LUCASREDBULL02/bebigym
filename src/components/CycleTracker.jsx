@@ -1,207 +1,106 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 
-function addDays(date, days) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
+export default function CycleTracker({ cycle, setCycle }) {
+  const today = new Date().toISOString().slice(0, 10);
 
-function formatDate(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function getDiffInDays(from, to) {
-  const a = new Date(from);
-  const b = new Date(to);
-  const diffMs = b.getTime() - a.getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-}
-
-function getPhaseForDay(cycleDay, cycleLength) {
-  if (!cycleDay || !cycleLength) {
-    return {
-      phase: "Okänd",
-      strength: "Normal",
-      emoji: "❓",
-      advice: "Fyll i din cykelinfo för att se rekommendationer.",
-      score: 50,
-      color: "rgba(148,163,184,0.25)",
-    };
+  function daysBetween(a, b) {
+    return Math.floor((new Date(b) - new Date(a)) / (1000 * 60 * 60 * 24));
   }
 
-  const m = cycleLength;
-  const menstruationEnd = Math.round((5 / 28) * m);
-  const follicularEnd = Math.round((12 / 28) * m);
-  const ovulationEnd = Math.round((15 / 28) * m);
+  const phase = useMemo(() => {
+    if (!cycle.lastPeriodStart) return null;
+    const day = daysBetween(cycle.lastPeriodStart, today) % cycle.cycleLength;
 
-  if (cycleDay <= menstruationEnd)
-    return {
-      phase: "Menstruation",
-      strength: "Lägre styrka",
-      emoji: "🩸",
-      advice: "Lättare pass, fokus på teknik.",
-      score: 35,
-      color: "rgba(248,113,113,0.25)",
-    };
+    if (day <= 5) return { key: "menstruation", name: "Menstruation", color: "#fca5a5" };
+    if (day <= 13) return { key: "follicular", name: "Follicular (Starkare)", color: "#fb7185" };
+    if (day === 14) return { key: "ovulation", name: "Ovulation (Peak)", color: "#f472b6" };
+    return { key: "luteal", name: "Luteal (Varierande)", color: "#f9a8d4" };
+  }, [cycle, today]);
 
-  if (cycleDay <= follicularEnd)
-    return {
-      phase: "Follikulär fas",
-      strength: "Stigande styrka",
-      emoji: "🌱",
-      advice: "Progressa! Bra fas för utveckling.",
-      score: 70,
-      color: "rgba(74,222,128,0.25)",
-    };
-
-  if (cycleDay <= ovulationEnd)
-    return {
-      phase: "Ägglossning – Peak",
-      strength: "Topprestations-fas",
-      emoji: "💛",
-      advice: "Magisk fas för tunga PR-försök.",
-      score: 90,
-      color: "rgba(250,204,21,0.3)",
-    };
-
-  return {
-    phase: "Luteal fas",
-    strength: "Mellan styrka",
-    emoji: "🌙",
-    advice: "Pump, högt reps, mer kontroll.",
-    score: 55,
-    color: "rgba(129,140,248,0.3)",
+  const strengthAdvice = {
+    menstruation: "Lugnare träning, fokus på form och rörlighet.",
+    follicular: "Du är som starkast! Push tungt idag.",
+    ovulation: "Peakstyrka – perfekt till PR!",
+    luteal: "Stabil styrka, men energi varierar.",
   };
-}
-
-export default function CycleTracker() {
-  const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem("bebi_cycle");
-    return saved
-      ? JSON.parse(saved)
-      : { lastPeriodDate: "", cycleLength: 28 };
-  });
-
-  useEffect(() => {
-    localStorage.setItem("bebi_cycle", JSON.stringify(settings));
-  }, [settings]);
-
-  const today = new Date();
-  const todayStr = formatDate(today);
-
-  const todayInfo = useMemo(() => {
-    if (!settings.lastPeriodDate) return getPhaseForDay(null, null);
-
-    const diff = getDiffInDays(settings.lastPeriodDate, todayStr);
-    if (diff < 0) return getPhaseForDay(null, null);
-
-    const cycleDay = (diff % settings.cycleLength) + 1;
-    return getPhaseForDay(cycleDay, settings.cycleLength);
-  }, [settings, todayStr]);
-
-  const calendarDays = useMemo(() => {
-    const arr = [];
-    const len = Number(settings.cycleLength) || 28;
-
-    for (let i = 0; i < 28; i++) {
-      const d = addDays(today, i);
-      const ds = formatDate(d);
-
-      if (!settings.lastPeriodDate) {
-        arr.push({
-          dateStr: ds,
-          label: ds.slice(5),
-          cycleDay: null,
-          phaseInfo: getPhaseForDay(null, null),
-        });
-        continue;
-      }
-
-      const diff = getDiffInDays(settings.lastPeriodDate, ds);
-      const cycleDay = diff >= 0 ? (diff % len) + 1 : null;
-
-      arr.push({
-        dateStr: ds,
-        label: ds.slice(5),
-        cycleDay,
-        phaseInfo: getPhaseForDay(cycleDay, len),
-      });
-    }
-    return arr;
-  }, [settings, today]);
 
   return (
-    <div className="cycle-root">
-      <div className="card">
-        <div style={{ fontSize: 14, opacity: 0.8 }}>Dagens fas</div>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>
-          {todayInfo.emoji} {todayInfo.phase}
-        </div>
-        <div style={{ fontSize: 13, marginTop: 4 }}>
-          {todayInfo.strength} – {todayInfo.advice}
-        </div>
-        <div
-          style={{
-            marginTop: 8,
-            padding: "4px 10px",
-            borderRadius: 12,
-            background: todayInfo.color,
-            width: "fit-content",
-            fontSize: 12,
-          }}
-        >
-          PR-läge: {todayInfo.score}/100 🔥
-        </div>
-      </div>
+    <div className="card" style={{ padding: 20 }}>
+      <h2 style={{ marginTop: 0 }}>🌸 Menstruationscykel & Styrkefaser</h2>
 
-      <div className="card">
-        <div style={{ fontSize: 14, fontWeight: 600 }}>Cykelinställningar</div>
-
-        <label className="small">Senaste mensen (1:a dagen):</label>
+      <div className="card small" style={{ background: "#fff", marginTop: 10 }}>
+        <label className="small">Senaste mensens startdatum</label>
         <input
           type="date"
           className="input"
-          value={settings.lastPeriodDate}
-          onChange={(e) =>
-            setSettings((p) => ({ ...p, lastPeriodDate: e.target.value }))
-          }
-        />
-
-        <label className="small" style={{ marginTop: 6 }}>
-          Cykellängd:
-        </label>
-        <input
-          className="input"
-          type="number"
-          min="21"
-          max="40"
-          value={settings.cycleLength}
-          onChange={(e) =>
-            setSettings((p) => ({ ...p, cycleLength: Number(e.target.value) }))
-          }
+          value={cycle.lastPeriodStart || ""}
+          onChange={(e) => setCycle({ ...cycle, lastPeriodStart: e.target.value })}
         />
       </div>
 
-      <div className="card">
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
-          28 dagar framåt
-        </div>
+      <div className="card small" style={{ marginTop: 10 }}>
+        <label className="small">Genomsnittlig cykellängd (dagar)</label>
+        <input
+          type="number"
+          className="input"
+          min={20}
+          max={40}
+          value={cycle.cycleLength}
+          onChange={(e) => setCycle({ ...cycle, cycleLength: Number(e.target.value) })}
+        />
+      </div>
 
-        <div className="cycle-grid">
-          {calendarDays.map((d) => (
+      {phase && (
+        <>
+          <div className="card small" style={{ marginTop: 20, borderLeft: `6px solid ${phase.color}` }}>
+            <h3 style={{ margin: 0 }}>{phase.name}</h3>
+            <p className="small" style={{ margin: "6px 0" }}>
+              {strengthAdvice[phase.key]}
+            </p>
+          </div>
+
+          <Calendar cycle={cycle} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ------------------ CALENDAR ------------------
+
+function Calendar({ cycle }) {
+  const days = Array.from({ length: cycle.cycleLength }, (_, i) => i);
+
+  function phaseOf(day) {
+    if (day <= 5) return "menstruation";
+    if (day <= 13) return "follicular";
+    if (day === 14) return "ovulation";
+    return "luteal";
+  }
+
+  const colors = {
+    menstruation: "#fecaca",
+    follicular: "#fbcfe8",
+    ovulation: "#f472b6",
+    luteal: "#f9a8d4",
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 20, padding: 20 }}>
+      <h3 style={{ marginTop: 0 }}>🌈 Cykelkarta</h3>
+      <div className="cycle-grid">
+        {days.map((d) => {
+          const p = phaseOf(d);
+          return (
             <div
-              key={d.dateStr}
-              className={`cycle-day ${d.dateStr === todayStr ? "today" : ""}`}
-              style={{ background: d.phaseInfo.color }}
+              key={d}
+              className="cycle-day"
+              style={{ background: colors[p] }}
             >
-              <div className="cycle-day-date">{d.label}</div>
-              <div className="cycle-day-emoji">{d.phaseInfo.emoji}</div>
-              <div className="cycle-day-phase">
-                {d.cycleDay ? `Dag ${d.cycleDay}` : "–"}
-              </div>
+              {d + 1}
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );

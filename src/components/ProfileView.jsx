@@ -1,106 +1,282 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  LineElement,
+  PointElement,
+  LinearScale,
+  TimeScale,
+  Tooltip,
+  Legend,
+} from "chart.js";
 
-export default function ProfileView({ profile, setProfile, bodyStats = {}, onAddMeasurement, onDeleteMeasurement }) {
+ChartJS.register(LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend);
+
+export default function ProfileView({
+  profile,
+  setProfile,
+  bodyStats,
+  onAddMeasurement,
+  onDeleteMeasurement,
+}) {
   const [form, setForm] = useState({
-    name: profile.name || "",
-    nick: profile.nick || "",
-    age: profile.age || "",
-    height: profile.height || "",
-    weight: profile.weight || "",
+    name: profile.name,
+    nick: profile.nick,
+    age: profile.age,
+    height: profile.height,
+    weight: profile.weight,
   });
-  const todayStr = new Date().toISOString().slice(0,10);
-  const [newMeasurement, setNewMeasurement] = useState({ key: "waist", value: "", date: todayStr });
 
-  const labels = { waist: "Midja", hips:"Höfter", thigh:"Lår", glutes:"Glutes", chest:"Bröst", arm:"Arm" };
+  const todayStr = new Date().toISOString().slice(0, 10);
 
-  function handleSave(){
-    setProfile({...profile, name: form.name, nick: form.nick, age: Number(form.age), height: Number(form.height), weight: Number(form.weight)});
+  const measurementLabels = {
+    waist: "Midja",
+    hips: "Höfter",
+    thigh: "Lår",
+    glutes: "Glutes",
+    chest: "Bröst",
+    arm: "Arm",
+  };
+
+  const [newMeasurement, setNewMeasurement] = useState({
+    key: "waist",
+    value: "",
+    date: todayStr,
+  });
+
+  function handleSaveProfile() {
+    setProfile({
+      ...profile,
+      name: form.name,
+      nick: form.nick,
+      age: Number(form.age),
+      height: Number(form.height),
+      weight: Number(form.weight),
+    });
   }
 
-  function addMeasurement(){
+  function handleAddMeasurement() {
     if (!newMeasurement.value) return;
-    const entry = { id: crypto?.randomUUID?.()||Math.random().toString(36).slice(2), date: newMeasurement.date || todayStr, value: Number(newMeasurement.value) };
-    onAddMeasurement(newMeasurement.key, entry);
-    setNewMeasurement({...newMeasurement, value: ""});
+
+    onAddMeasurement(newMeasurement.key, {
+      id: crypto.randomUUID(),
+      value: Number(newMeasurement.value),
+      date: newMeasurement.date,
+    });
+
+    setNewMeasurement((prev) => ({ ...prev, value: "" }));
   }
 
-  function MeasurementSparkline({list=[]}){
-    if (!list || list.length < 2) return null;
-    const sorted = [...list].sort((a,b)=>a.date.localeCompare(b.date));
-    const vals = sorted.map(s => s.value);
-    const min = Math.min(...vals), max = Math.max(...vals);
-    const span = max - min || 1;
-    const W = 120, H = 36;
-    const points = sorted.map((m,i)=> {
-      const x = (i/(sorted.length-1))*W;
-      const y = H - ((m.value - min)/span)*H;
-      return `${x},${y}`;
-    }).join(" ");
-    return <svg className="measure-sparkline" viewBox={`0 0 ${W} ${H}`}><polyline fill="none" stroke="currentColor" strokeWidth="2" points={points} /></svg>;
-  }
+  // ------------------------------
+  // BODY PROGRESS MULTI-LINE GRAPH
+  // ------------------------------
 
-  function getSummary(list=[]){
-    if (!list.length) return null;
-    const sorted = [...list].sort((a,b)=>a.date.localeCompare(b.date));
-    const first = sorted[0], last = sorted[sorted.length-1];
-    return { first, last, diff: last.value - first.value };
-  }
+  const mergedChart = useMemo(() => {
+    const datasets = Object.entries(bodyStats).map(([key, list]) => {
+      const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
+      return {
+        label: measurementLabels[key],
+        data: sorted.map((m) => ({ x: m.date, y: m.value })),
+        borderColor: {
+          waist: "#ff75b5",
+          hips: "#ffd18c",
+          thigh: "#b58cff",
+          glutes: "#ff8ccf",
+          chest: "#ff9f9f",
+          arm: "#8cd1ff",
+        }[key],
+        tension: 0.35,
+        borderWidth: 2,
+        pointRadius: 3,
+      };
+    });
+
+    return {
+      datasets,
+    };
+  }, [bodyStats]);
+
+  const chartOptions = {
+    responsive: true,
+    scales: {
+      x: {
+        type: "time",
+        time: { unit: "day" },
+        ticks: { color: "#fff" },
+        grid: { color: "rgba(255,255,255,0.07)" },
+      },
+      y: {
+        ticks: { color: "#fff" },
+        grid: { color: "rgba(255,255,255,0.07)" },
+      },
+    },
+    plugins: {
+      legend: {
+        labels: { color: "#fff", boxWidth: 14 },
+      },
+    },
+  };
+
+  // ------------------------------
 
   return (
     <div className="profile-page">
-      <h2 className="profile-header">👤 Din profil & kroppsmått</h2>
 
+      {/* --------- PROFILE CARD --------- */}
       <div className="profile-card">
-        <h3 className="section-title">🧸 Grundinfo</h3>
-        <div className="input-group"><label>Namn</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></div>
-        <div className="input-group"><label>Smeknamn</label><input value={form.nick} onChange={e=>setForm({...form,nick:e.target.value})} /></div>
-        <div className="profile-grid">
-          <div className="input-group"><label>Ålder</label><input type="number" value={form.age} onChange={e=>setForm({...form,age:e.target.value})} /></div>
-          <div className="input-group"><label>Längd (cm)</label><input type="number" value={form.height} onChange={e=>setForm({...form,height:e.target.value})} /></div>
-          <div className="input-group"><label>Vikt (kg)</label><input type="number" value={form.weight} onChange={e=>setForm({...form,weight:e.target.value})} /></div>
+        <h3 className="section-title">👤 Profil</h3>
+
+        <div className="input-group">
+          <label>Namn</label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
         </div>
-        <div style={{marginTop:8}}><button className="btn-pink" onClick={handleSave}>💾 Spara profil</button></div>
+
+        <div className="input-group">
+          <label>Smeknamn</label>
+          <input
+            value={form.nick}
+            onChange={(e) => setForm({ ...form, nick: e.target.value })}
+          />
+        </div>
+
+        <div className="profile-grid">
+          <div className="input-group">
+            <label>Ålder</label>
+            <input
+              type="number"
+              value={form.age}
+              onChange={(e) => setForm({ ...form, age: e.target.value })}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Längd (cm)</label>
+            <input
+              type="number"
+              value={form.height}
+              onChange={(e) => setForm({ ...form, height: e.target.value })}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Vikt (kg)</label>
+            <input
+              type="number"
+              value={form.weight}
+              onChange={(e) => setForm({ ...form, weight: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <button className="btn-pink" style={{ marginTop: 12 }} onClick={handleSaveProfile}>
+          💾 Spara profil
+        </button>
       </div>
 
+      {/* --------- BODY PROGRESS GRAPH --------- */}
       <div className="profile-card">
-        <h3 className="section-title">📏 Kroppsmått & utveckling</h3>
+        <h3 className="section-title">📊 Kroppsutveckling – Allt i en graf</h3>
 
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <select value={newMeasurement.key} onChange={e=>setNewMeasurement({...newMeasurement,key:e.target.value})}>
-            {Object.entries(labels).map(([k,v])=> <option key={k} value={k}>{v}</option>)}
-          </select>
-          <input type="number" placeholder="cm" value={newMeasurement.value} onChange={e=>setNewMeasurement({...newMeasurement,value:e.target.value})}/>
-          <input type="date" value={newMeasurement.date} onChange={e=>setNewMeasurement({...newMeasurement,date:e.target.value})}/>
-          <button className="btn" onClick={addMeasurement}>➕</button>
+        <div style={{ width: "100%", height: 300 }}>
+          <Line data={mergedChart} options={chartOptions} />
+        </div>
+      </div>
+
+      {/* --------- ADD MEASUREMENT --------- */}
+      <div className="profile-card">
+        <h3 className="section-title">📏 Lägg till kroppsmått</h3>
+
+        <div className="profile-grid">
+          <div className="input-group">
+            <label>Typ</label>
+            <select
+              value={newMeasurement.key}
+              onChange={(e) =>
+                setNewMeasurement((p) => ({ ...p, key: e.target.value }))
+              }
+            >
+              {Object.entries(measurementLabels).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="input-group">
+            <label>Värde (cm)</label>
+            <input
+              type="number"
+              value={newMeasurement.value}
+              onChange={(e) =>
+                setNewMeasurement((p) => ({ ...p, value: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Datum</label>
+            <input
+              type="date"
+              value={newMeasurement.date}
+              onChange={(e) =>
+                setNewMeasurement((p) => ({ ...p, date: e.target.value }))
+              }
+            />
+          </div>
         </div>
 
-        <div style={{marginTop:12}}>
-          {Object.entries(bodyStats).map(([k,list])=>{
-            const summary = getSummary(list);
-            return (
-              <div key={k} className="measure-block">
-                <div className="measure-header-row">
-                  <div>
-                    <h4 className="measure-title">{labels[k] || k}</h4>
-                    {summary ? <div className="measure-meta small">Senast: <strong>{summary.last.value} cm</strong> ({summary.last.date}) • Förändring: <strong style={{color: summary.diff>0?"#ff9ec2":"#9ef2c8"}}>{summary.diff>0?"+":""}{summary.diff.toFixed(1)} cm</strong></div> : <div className="measure-meta small">Inga värden än</div>}
-                  </div>
+        <button className="btn" style={{ marginTop: 10 }} onClick={handleAddMeasurement}>
+          ➕ Lägg till
+        </button>
+      </div>
 
-                  <MeasurementSparkline list={list} />
-                </div>
+      {/* --------- INDIVIDUAL LISTS --------- */}
+      <div className="profile-card">
+        <h3 className="section-title">📚 Historik per mått</h3>
 
-                {(!list || list.length===0) ? <p className="empty-text">Inga registrerade värden.</p> :
-                  <div className="measure-list">
-                    {list.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(m=>(
-                      <div key={m.id} className="measure-item">
-                        <span>{m.date}: <strong>{m.value} cm</strong></span>
-                        <button className="delete-btn" onClick={()=>onDeleteMeasurement(k,m.id)}>🗑️</button>
-                      </div>
-                    ))}
-                  </div>}
+        {Object.entries(bodyStats).map(([key, list]) => (
+          <div key={key} className="measure-block">
+            <h4 style={{ marginBottom: 6, fontSize: 15 }}>
+              {measurementLabels[key]}
+            </h4>
+
+            {!list.length && <div className="small">Inga värden ännu.</div>}
+
+            {list.length > 0 && (
+              <div className="measure-list">
+                {list
+                  .slice()
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "6px 0",
+                        borderBottom: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      <span>
+                        {m.date} — <strong>{m.value} cm</strong>
+                      </span>
+                      <button
+                        className="btn"
+                        style={{ padding: "3px 6px", fontSize: 11 }}
+                        onClick={() => onDeleteMeasurement(key, m.id)}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  ))}
               </div>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

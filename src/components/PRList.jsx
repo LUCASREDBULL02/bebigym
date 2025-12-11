@@ -1,36 +1,81 @@
-import React from 'react'
-import { EXERCISES } from '../data/exercises'
+// src/components/PRList.jsx
+import React from "react";
+import { EXERCISES } from "../data/exercises";
 
 export default function PRList({ prMap }) {
-  const rows = Object.entries(prMap).map(([exId, data]) => {
-    const ex = EXERCISES.find((e) => e.id === exId)
-    return {
-      id: exId,
-      name: ex?.name || exId,
-      best1RM: data.best1RM,
-      last: data.history[data.history.length - 1],
-    }
-  })
+  function Spark({ history }) {
+    if (!history || history.length < 2) return null;
 
-  if (!rows.length) {
+    const sorted = [...history].sort((a, b) =>
+      a.date.localeCompare(b.date)
+    );
+    const vals = sorted.map((h) => h.oneRm);
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const span = max - min || 1;
+
+    const width = 120;
+    const height = 40;
+
+    const pts = sorted
+      .map((h, i) => {
+        const x =
+          sorted.length === 1 ? width / 2 : (i / (sorted.length - 1)) * width;
+        const y = height - ((h.oneRm - min) / span) * height;
+        return `${x},${y}`;
+      })
+      .join(" ");
+
     return (
-      <div className="card small">
-        <h3 style={{ marginTop: 0 }}>PR-lista 🏆</h3>
-        <p className="small">Inga PR än – men det kommer, Bebi 💖</p>
-      </div>
-    )
+      <svg width={width} height={height} style={{ opacity: 0.9 }}>
+        <polyline
+          fill="none"
+          stroke="#ff6ea1"
+          strokeWidth="2"
+          points={pts}
+        />
+      </svg>
+    );
   }
 
   return (
-    <div className="card small">
-      <h3 style={{ marginTop: 0 }}>Senaste PRs 🏆</h3>
-      <ul style={{ paddingLeft: 16, margin: 0, marginTop: 6, maxHeight: 160, overflowY: 'auto' }}>
-        {rows.map((r) => (
-          <li key={r.id} style={{ fontSize: 12, marginBottom: 3 }}>
-            {r.name}: {r.last.weight} kg × {r.last.reps} reps — 1RM ca {r.best1RM} kg ({r.last.date})
-          </li>
-        ))}
-      </ul>
+    <div className="card" style={{ padding: 20 }}>
+      <h2 style={{ marginTop: 0 }}>🏆 PR-historik</h2>
+
+      {Object.keys(prMap).length === 0 && (
+        <p className="small">Inga PR än – logga tunga set!</p>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {Object.entries(prMap).map(([id, data]) => {
+          const ex = EXERCISES.find((e) => e.id === id);
+          return (
+            <div
+              key={id}
+              className="card"
+              style={{
+                padding: 12,
+                borderRadius: 14,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "rgba(255,255,255,0.03)",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 700 }}>
+                  {ex?.name || id}
+                </div>
+                <div className="small" style={{ opacity: 0.8 }}>
+                  Bästa 1RM: <strong>{data.best1RM} kg</strong>
+                </div>
+              </div>
+
+              <Spark history={data.history} />
+            </div>
+          );
+        })}
+      </div>
     </div>
-  )
+  );
 }

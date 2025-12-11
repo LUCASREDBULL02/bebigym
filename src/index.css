@@ -476,3 +476,6 @@ body {
 .cycle-day.low {
   background: #b83274;
 }
+/* LiftTools & CycleCalendar specific */
+.lift-tools { margin-top: 8px; }
+.sparkline { width: 100%; height: 40px; display: block; color: var(--pink-soft); }

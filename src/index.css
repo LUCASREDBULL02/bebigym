@@ -134,3 +134,139 @@ body{
   .mobile-drawer{width:100%;border-radius:0}
   .card{padding:12px}
 }
+/* PROFILE PAGE BEAUTIFICATION */
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.profile-card {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(255, 105, 155, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.section-title {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.input-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.input-block input,
+.input-block select {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: inherit;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.btn-save {
+  margin-top: 10px;
+  padding: 12px;
+  background: linear-gradient(90deg, #ff7ab8, #ffb2d6);
+  border: 0;
+  width: 100%;
+  border-radius: 12px;
+  font-weight: 700;
+  color: #0b0e17;
+}
+
+.measure-add {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.measure-add input,
+.measure-add select {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: inherit;
+}
+
+.btn-add {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 0;
+  background: #ff8ac2;
+  font-size: 20px;
+  color: #0b0e17;
+}
+
+.measure-block {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.015);
+  border: 1px solid rgba(255,255,255,0.04);
+  margin-bottom: 10px;
+}
+
+.measure-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.measure-title {
+  margin: 0;
+}
+
+.measure-info {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.measure-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.measure-item {
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delete-btn {
+  background: transparent;
+  font-size: 18px;
+  color: #ff6fa3;
+  border: 0;
+  cursor: pointer;
+}
+
+/* Sparkline */
+.spark {
+  opacity: 0.9;
+}

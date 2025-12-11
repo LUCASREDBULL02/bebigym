@@ -1,343 +1,431 @@
-/* -------------------------
-   GLOBAL STYLE
--------------------------- */
-body {
-  margin: 0;
+/* -----------------------------------
+   GLOBAL THEME – ROSA / SOFT / CLEAN
+----------------------------------- */
+
+:root {
+  --bg: #0f172a;
+  --bg-card: rgba(255, 255, 255, 0.06);
+  --bg-card-solid: #1e293b;
+  --fg: #f1f5f9;
+  --sub: #94a3b8;
+  --pink: #ff8fbf;
+  --pink-dark: #ff6fa9;
+  --line-soft: rgba(255, 143, 191, 0.2);
+  --radius: 12px;
+  --radius-lg: 18px;
+  --transition: 0.18s ease;
+}
+
+html, body {
   padding: 0;
-  background: #0f172a;
-  color: #f1f5f9;
-  font-family: Inter, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Inter", system-ui, sans-serif;
 }
 
-h2, h3, h4 {
-  margin: 0 0 6px 0;
+button, input, select {
+  font-family: inherit;
+  outline: none;
 }
 
-button {
-  cursor: pointer;
+h3, h4 {
+  margin-top: 0;
+  color: var(--pink);
 }
 
-/* -------------------------
+/* -----------------------------------
    LAYOUT
--------------------------- */
+----------------------------------- */
 
 .app-shell {
   display: flex;
   min-height: 100vh;
+  overflow: hidden;
 }
 
-/* SIDEBAR (desktop only) */
+/* ---- SIDEBAR (DESKTOP) ---- */
+
 .sidebar {
-  width: 250px;
-  background: #1e293b;
-  border-right: 1px solid #334155;
-  padding: 16px;
+  width: 240px;
+  background: #1a2234;
+  padding: 20px;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid rgba(255, 143, 191, 0.15);
 }
 
 .sidebar-header {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
+
 .sidebar-title {
   font-size: 18px;
   font-weight: 700;
+  color: var(--pink);
 }
+
 .sidebar-sub {
   font-size: 12px;
-  opacity: 0.7;
+  color: var(--sub);
 }
+
+/* ---- NAV BUTTONS ---- */
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 14px;
 }
 
 .sidebar-link {
-  background: #0f172a;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #334155;
+  background: none;
+  border: none;
   text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--radius);
   font-size: 14px;
-  color: #e2e8f0;
-}
-.sidebar-link.active {
-  background: #f472b6;
-  color: #1e1e1e;
-  border-color: #f9a8d4;
-  font-weight: 600;
+  color: var(--fg);
+  cursor: pointer;
+  transition: var(--transition);
 }
 
-/* MAIN */
+.sidebar-link:hover {
+  background: rgba(255, 143, 191, 0.1);
+}
+
+.sidebar-link.active {
+  background: var(--pink);
+  color: #111;
+}
+
+/* -----------------------------------
+   MOBILE DRAWER (HIDDEN ON DESKTOP)
+----------------------------------- */
+
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: -260px;
+  width: 240px;
+  height: 100%;
+  background: #1a2234;
+  padding: 20px;
+  transition: 0.25s ease;
+  z-index: 2000;
+}
+
+.mobile-drawer.open {
+  left: 0;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drawer-links {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drawer-links button {
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  text-align: left;
+  color: var(--fg);
+  font-size: 14px;
+}
+
+.drawer-links button:hover {
+  background: rgba(255, 143, 191, 0.15);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--pink);
+  font-size: 20px;
+}
+
+/* -----------------------------------
+   RESPONSIVE NAV RULES
+----------------------------------- */
+
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--pink);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+
+  .sidebar {
+    display: none;
+  }
+
+  .hamburger-btn {
+    display: block;
+  }
+
+  .mobile-drawer {
+    display: block;
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-drawer {
+    display: none !important;
+  }
+}
+
+/* -----------------------------------
+   MAIN CONTENT
+----------------------------------- */
+
 .main {
   flex: 1;
-  padding: 18px;
+  padding: 20px;
 }
 
 .main-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
 .main-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
 }
+
 .main-sub {
   font-size: 13px;
-  opacity: 0.75;
-  max-width: 380px;
+  color: var(--sub);
 }
 
-/* -------------------------
-   MOBILE NAV
--------------------------- */
-
-.hamburger-btn {
-  background: transparent;
-  border: none;
-  font-size: 26px;
-  display: none;
-}
-
-/* drawer hidden by default */
-.mobile-drawer {
-  display: none;
-}
-
-/* MOBILE ONLY RULES */
-@media (max-width: 900px) {
-  .sidebar {
-    display: none; /* <-- FIX: döljer sidebar helt på mobil */
-  }
-
-  .hamburger-btn {
-    display: block; /* visible only mobile */
-  }
-
-  .mobile-drawer {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: -100%;
-    width: 75%;
-    height: 100%;
-    background: #1e293b;
-    transition: left 0.25s ease;
-    padding: 18px;
-    z-index: 9999;
-  }
-
-  .mobile-drawer.open {
-    left: 0;
-  }
-
-  .drawer-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .drawer-links {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .drawer-links button {
-    padding: 10px 12px;
-    background: #0f172a;
-    border-radius: 10px;
-    border: 1px solid #334155;
-    color: #f1f5f9;
-    font-size: 14px;
-    text-align: left;
-  }
-}
-
-/* -------------------------
+/* -----------------------------------
    CARDS
--------------------------- */
+----------------------------------- */
+
 .card {
-  background: #1e293b;
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid #334155;
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(8px);
 }
 
-/* -------------------------
+/* -----------------------------------
    BUTTONS
--------------------------- */
+----------------------------------- */
+
 .btn {
-  background: #334155;
-  border: 1px solid #475569;
-  padding: 8px 14px;
-  border-radius: 8px;
-  color: #e2e8f0;
-  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--sub);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .btn-pink {
-  background: #f472b6;
-  border: 1px solid #f9a8d4;
-  padding: 8px 14px;
-  border-radius: 8px;
-  color: #1e1e1e;
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--pink);
+  color: #111;
   font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
 }
 
-/* -------------------------
-   PROFILE PAGE
--------------------------- */
-
-.profile-page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.btn-pink:hover {
+  background: var(--pink-dark);
 }
 
-.profile-card {
-  background: #1e293b;
-  padding: 18px;
-  border-radius: 14px;
-  border: 1px solid #334155;
-}
+/* -----------------------------------
+   INPUTS
+----------------------------------- */
 
 .input-group {
-  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
 }
 
 .input-group label {
-  display: block;
   font-size: 12px;
-  opacity: 0.75;
   margin-bottom: 4px;
+  color: var(--sub);
 }
 
 .input-group input,
 .input-group select {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #334155;
-  background: #0f172a;
-  color: #f1f5f9;
+  padding: 8px;
+  background: #1f2a3d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+  border-radius: var(--radius);
 }
 
-/* grid for profile */
-.profile-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+.input-row {
+  display: flex;
   gap: 10px;
 }
 
-/* measurements */
-.measure-block {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #334155;
-}
-
-.measure-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.measure-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.measure-meta {
-  font-size: 12px;
-  opacity: 0.75;
-}
-
-.measure-sparkline {
-  width: 120px;
-  height: 36px;
-  color: #f472b6;
-}
-
-.measure-list {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.measure-item {
-  background: #0f172a;
-  border: 1px solid #334155;
-  padding: 6px 8px;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-}
-
-.delete-btn {
-  background: transparent;
-  border: none;
-  color: #f87171;
-  font-size: 16px;
-}
-
-/* -------------------------
+/* -----------------------------------
    TABS (LiftTools)
--------------------------- */
+----------------------------------- */
 
 .tabs {
   display: flex;
   gap: 6px;
-  margin-bottom: 16px;
+  overflow-x: auto;
 }
 
-.tab-btn {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  background: #0f172a;
-  border: 1px solid #334155;
-  color: #e2e8f0;
+.tab {
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--fg);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
 }
 
-.tab-btn.active {
-  background: #f472b6;
-  color: #1e1e1e;
+.tab:hover {
+  background: rgba(255, 143, 191, 0.18);
+}
+
+.tab.active {
+  background: var(--pink);
+  color: #111;
   font-weight: 600;
 }
 
-.chart-card {
-  background: #0f172a;
-  border: 1px solid #334155;
+/* -----------------------------------
+   STAT PILLS
+----------------------------------- */
+
+.stat-pill {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 12px;
+}
+
+/* -----------------------------------
+   ESTIMATOR CARDS
+----------------------------------- */
+
+.est-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.est-card {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.08);
+  text-align: center;
+}
+
+/* -----------------------------------
+   VOLUME CARDS
+----------------------------------- */
+
+.volume-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.volume-card {
+  background: rgba(255,255,255,0.07);
   padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* -----------------------------------
+   PROFILE VIEW BOOST
+----------------------------------- */
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px,1fr));
+  gap: 10px;
+}
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
   border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid var(--pink);
 }
 
-/* Ensure charts scale */
-canvas {
-  width: 100% !important;
-  max-height: 300px;
+.measure-list {
+  margin-top: 10px;
 }
 
-/* -------------------------
-   GRAPH COLORS
--------------------------- */
+.measure-item {
+  background: rgba(255,255,255,0.06);
+  padding: 10px;
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 6px;
+}
 
-:root {
-  --pink: #f472b6;
-  --yellow: #facc15;
-  --blue: #3b82f6;
-  --green: #4ade80;
-  --purple: #a78bfa;
-  --red: #f87171;
+/* -----------------------------------
+   GRAPH BACKGROUND
+----------------------------------- */
+
+svg {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius);
+}
+
+/* -----------------------------------
+   MISC
+----------------------------------- */
+
+.empty-text {
+  font-size: 13px;
+  color: var(--sub);
+  margin-top: 6px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }

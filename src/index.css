@@ -1,99 +1,323 @@
-/* ---------- index.css (full replacement) ---------- */
-:root{
-  --bg:#0b1020;
-  --card: rgba(255,255,255,0.04);
-  --muted:#9ca3af;
-  --pink:#ffb4d6;
-  --pink-strong:#ff8fc8;
-  --radius:14px;
-  --radius-lg:22px;
-  --shadow: 0 8px 28px rgba(0,0,0,0.4);
-}
-*{box-sizing:border-box}
-html,body,#root{height:100%}
-body{
-  margin:0;padding:0;
-  background:var(--bg);
-  color:#fff;
-  font-family:-apple-system, BlinkMacSystemFont, "Inter", sans-serif;
-  -webkit-font-smoothing:antialiased;
-}
-.app-shell{display:flex;min-height:100vh;}
+/* ------------------------------
+   GLOBAL iOS-PINK THEME
+------------------------------ */
 
-/* SIDEBAR */
-.sidebar{
-  width:240px;padding:20px;display:flex;flex-direction:column;
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-right:1px solid rgba(255,255,255,0.03);
-}
-.sidebar-header{margin-bottom:12px}
-.sidebar-title{color:var(--pink);font-weight:700;font-size:20px}
-.sidebar-sub{color:var(--muted);font-size:13px;margin-top:4px}
-.sidebar-nav{margin-top:18px;display:flex;flex-direction:column;gap:8px}
-.sidebar-link{
-  padding:10px;border-radius:12px;background:transparent;border:none;color:inherit;text-align:left;cursor:pointer;font-size:15px;
-}
-.sidebar-link:hover{background:rgba(255,255,255,0.03)}
-.sidebar-link.active{background:var(--pink);color:#111;font-weight:700}
-
-/* MOBILE DRAWER - hidden on desktop */
-.mobile-drawer{
-  position:fixed;left:-300px;top:0;bottom:0;width:260px;padding:18px;background:rgba(8,9,14,0.98);z-index:60;transition:left .24s;
-  box-shadow: 8px 0 24px rgba(0,0,0,0.5);
-}
-.mobile-drawer.open{left:0}
-.drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.drawer-links button{display:block;width:100%;padding:10px;margin-bottom:8px;border-radius:12px;border:none;background:rgba(255,255,255,0.03);color:inherit}
-
-/* MAIN */
-.main{flex:1;padding:22px 28px;max-width:1150px;margin:0 auto}
-.main-header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);box-shadow:var(--shadow);margin-bottom:18px}
-.main-title{font-size:20px;font-weight:700}
-.main-sub{font-size:13px;color:var(--muted)}
-
-.hamburger-btn{display:none;background:none;border:none;color:var(--pink);font-size:26px}
-@media (max-width:900px){
-  .sidebar{display:none}
-  .hamburger-btn{display:block}
-  .main{padding:14px}
+:root {
+  --pink-light: #ffe6f1;
+  --pink: #ff80b5;
+  --pink-strong: #ff4fa3;
+  --bg-dark: #0f172a;
+  --bg-card: rgba(255,255,255,0.08);
+  --border-soft: rgba(255,255,255,0.15);
+  --text-light: #f2f2f7;
+  --text-muted: #cbd5e1;
+  --radius: 16px;
+  --trans: 0.25s ease;
 }
 
-/* CARDS */
-.card{background:var(--card);padding:18px;border-radius:18px;border:1px solid rgba(255,255,255,0.05);box-shadow:var(--shadow);margin-bottom:14px}
-.card.small{padding:12px}
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-dark);
+  color: var(--text-light);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+}
 
-/* BUTTONS */
-.btn{padding:8px 12px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:inherit;cursor:pointer}
-.btn-pink{padding:8px 14px;border-radius:12px;background:var(--pink);border:none;color:#111;font-weight:700}
+/* Smooth scrolling / iOS feel */
+* {
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-width: thin;
+}
 
-/* INPUTS */
-.input-group{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
-.input-group input, .input-group select{padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);background:rgba(255,255,255,0.02);color:inherit}
+/* ------------------------------
+   LAYOUT
+------------------------------ */
 
-/* PROGRESS */
-.progress-wrap{height:10px;background:rgba(255,255,255,0.03);border-radius:999px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--pink),var(--pink-strong));width:0%}
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
 
-/* profile view polishing */
-.profile-page{display:flex;flex-direction:column;gap:12px}
-.profile-card{padding:18px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04)}
-.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-@media (max-width:900px){ .profile-grid{grid-template-columns:repeat(1,1fr)} }
+/* ------------------------------
+   SIDEBAR (DESKTOP)
+------------------------------ */
 
-.measure-block{margin-top:10px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.02)}
-.measure-header-row{display:flex;justify-content:space-between;align-items:center}
-.measure-list{margin-top:8px}
-.measure-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:10px;background:rgba(255,255,255,0.02);margin-bottom:8px}
-.delete-btn{background:transparent;border:none;color:#ff9ec2;cursor:pointer}
+.sidebar {
+  width: 240px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--border-soft);
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+}
 
-/* small utility */
-.small{font-size:13px;color:var(--muted)}
-.empty-text{color:var(--muted);padding:8px}
+.sidebar-header {
+  margin-bottom: 24px;
+}
 
-/* line sparkline style */
-.measure-sparkline{width:120px;height:36px;}
+.sidebar-title {
+  font-weight: 700;
+  font-size: 20px;
+}
 
-/* ensure mobile drawer hidden on wide screens to prevent duplicates */
-@media (min-width:901px){
-  .mobile-drawer{display:none !important}
+.sidebar-sub {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.sidebar-link {
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--text-light);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--trans);
+  font-size: 14px;
+}
+
+.sidebar-link:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.sidebar-link.active {
+  background: var(--pink);
+  color: #fff;
+}
+
+/* ------------------------------
+   HAMBURGER (MOBILE ONLY)
+------------------------------ */
+
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-light);
+  font-size: 26px;
+  padding: 6px;
+}
+
+/* ------------------------------
+   MOBILE DRAWER
+------------------------------ */
+
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: -260px;
+  width: 240px;
+  height: 100vh;
+  background: rgba(30,41,59,0.96);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid var(--border-soft);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: var(--trans);
+  z-index: 999;
+}
+
+.mobile-drawer.open {
+  left: 0;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+}
+
+.drawer-links button {
+  background: rgba(255,255,255,0.08);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px;
+  text-align: left;
+  margin-bottom: 4px;
+}
+
+/* ------------------------------
+   MAIN CONTENT
+------------------------------ */
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px;
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.main-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.main-sub {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* ------------------------------
+   CARDS (GLOBAL)
+------------------------------ */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  padding: 18px;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.card.small {
+  padding: 14px;
+}
+
+/* ------------------------------
+   BUTTONS
+------------------------------ */
+
+.btn {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-light);
+  border: 1px solid var(--border-soft);
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--trans);
+}
+
+.btn:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.btn-pink {
+  background: var(--pink);
+  border: none;
+  color: white;
+  padding: 10px 16px;
+  font-weight: 600;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--trans);
+}
+
+.btn-pink:hover {
+  background: var(--pink-strong);
+}
+
+/* ------------------------------
+   PROFILE PAGE
+------------------------------ */
+
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-card {
+  background: var(--bg-card);
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-soft);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+/* iOS styled input fields */
+.input-group label {
+  font-size: 13px;
+  opacity: 0.75;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.input-group input,
+.input-group select {
+  width: 100%;
+  padding: 10px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  color: white;
+  font-size: 14px;
+}
+
+/* GRID */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+
+/* ------------------------------
+   BODY PROGRESS GRAPH BLOCKS
+------------------------------ */
+
+.measure-block {
+  padding: 14px;
+  background: rgba(255,255,255,0.05);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-soft);
+  margin-bottom: 12px;
+}
+
+.measure-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.measure-sparkline {
+  width: 120px;
+  height: 36px;
+  opacity: 0.7;
+}
+
+/* ------------------------------
+   RESPONSIVE RULES
+------------------------------ */
+
+@media (max-width: 900px) {
+  .sidebar {
+    display: none;
+  }
+  .hamburger-btn {
+    display: block;
+  }
+  .main {
+    padding: 16px;
+  }
+}
+
+/* Show sidebar on desktop, hide drawer */
+@media (min-width: 901px) {
+  .mobile-drawer {
+    display: none;
+  }
 }

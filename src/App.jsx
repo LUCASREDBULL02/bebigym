@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import ProfileView from "./components/ProfileView.jsx";
 import Toast from "./components/Toast.jsx";
@@ -130,18 +131,16 @@ function computeMuscleStatsFromLogs(logs, profile) {
 
 // ------------------ CYCLE HELPERS ------------------
 // Simple 28-ish day model with configurable length/start.
-// phases: Menstrual (days 0..m-1), Follicular, Ovulation, Luteal
 function getCycleInfo(cycleStartISO, cycleLength = 28, todays = new Date()) {
   if (!cycleStartISO) return null;
   const start = new Date(cycleStartISO + "T00:00:00");
+  if (isNaN(start.getTime())) return null;
   const diffMs = todays - start;
   const daysSince = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  // normalize
   const idx = ((daysSince % cycleLength) + cycleLength) % cycleLength;
-  // Phase segmentation (flexible)
-  const menstrualDays = Math.max(3, Math.round(cycleLength * 0.18)); // ~5
-  const follicularDays = Math.max(6, Math.round(cycleLength * 0.32)); // ~9
-  const ovulationDays = Math.max(1, Math.round(cycleLength * 0.07)); // ~2
+  const menstrualDays = Math.max(3, Math.round(cycleLength * 0.18));
+  const follicularDays = Math.max(6, Math.round(cycleLength * 0.32));
+  const ovulationDays = Math.max(1, Math.round(cycleLength * 0.07));
   const lutealDays = cycleLength - (menstrualDays + follicularDays + ovulationDays);
 
   if (idx < menstrualDays) return { phase: "Menstrual", dayInPhase: idx + 1, menstrualDays, follicularDays, ovulationDays, lutealDays, cycleIndex: idx };
@@ -149,9 +148,7 @@ function getCycleInfo(cycleStartISO, cycleLength = 28, todays = new Date()) {
   if (idx < menstrualDays + follicularDays + ovulationDays) return { phase: "Ovulation", dayInPhase: idx - menstrualDays - follicularDays + 1, menstrualDays, follicularDays, ovulationDays, lutealDays, cycleIndex: idx };
   return { phase: "Luteal", dayInPhase: idx - menstrualDays - follicularDays - ovulationDays + 1, menstrualDays, follicularDays, ovulationDays, lutealDays, cycleIndex: idx };
 }
-
 function phaseIntensityFactor(phase) {
-  // approximate intensity recommendation multipliers
   switch (phase) {
     case "Menstrual": return 0.85;
     case "Follicular": return 1.00;
@@ -205,7 +202,7 @@ export default function App() {
 
   function showToastMsg(title, subtitle) {
     setToast({ title, subtitle });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 2800);
   }
 
   // Recompute stats
@@ -214,7 +211,7 @@ export default function App() {
   const comparisonData = useMemo(() => buildComparisonChartData(muscleStats), [muscleStats]);
 
   // Cycle info for today
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const cycleInfo = useMemo(() => getCycleInfo(cycleStart, Number(cycleLength || 28), today), [cycleStart, cycleLength, today]);
   const todayFactor = cycleInfo ? phaseIntensityFactor(cycleInfo.phase) : 1.0;
 
@@ -243,7 +240,7 @@ export default function App() {
   // Spara set
   function handleSaveSet(entry) {
     const todayStr = new Date().toISOString().slice(0, 10);
-    const finalEntry = { ...entry, id: crypto.randomUUID?.() || Math.random().toString(36), date: entry.date || todayStr };
+    const finalEntry = { ...entry, id: (crypto && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36)), date: entry.date || todayStr };
 
     const prevForExercise = logs.filter((l) => l.exerciseId === finalEntry.exerciseId);
     const prevBest = prevForExercise.length ? Math.max(...prevForExercise.map((l) => calc1RM(l.weight, l.reps))) : 0;
@@ -291,38 +288,35 @@ export default function App() {
 
   // Cycle page component (inline)
   function CyclePage() {
-    const [start, setStart] = useState(cycleStart || "");
-    const [length, setLengthLocal] = useState(cycleLength || 28);
+    const [startLocal, setStartLocal] = useState(cycleStart || "");
+    const [lengthLocal, setLengthLocal] = useState(cycleLength || 28);
 
-    useEffect(() => setStart(cycleStart || ""), [cycleStart]);
+    useEffect(() => setStartLocal(cycleStart || ""), [cycleStart]);
     useEffect(() => setLengthLocal(cycleLength || 28), [cycleLength]);
 
     function handleSaveCycle() {
-      setCycleStart(start);
-      setCycleLength(Number(length) || 28);
-      showToastMsg("Cykel sparad", `Start: ${start || "ej satt"}, Längd: ${length}d`);
+      setCycleStart(startLocal);
+      setCycleLength(Number(lengthLocal) || 28);
+      showToastMsg("Cykel sparad", `Start: ${startLocal || "ej satt"}, Längd: ${lengthLocal}d`);
     }
 
-    // simple visual calendar for one cycle length (list of days with phase)
-    const days = [];
-    const clen = Number(length) || 28;
-    for (let d = 0; d < clen; d += 1) {
-      const info = getCycleInfo(start, clen, new Date(new Date(start + "T00:00:00").getTime() + d * 24 * 60 * 60 * 1000));
-      // if start empty, info null
-      if (!info) days.push({ day: d + 1, phase: "—" });
-      else {
-        // compute phase for that day relative to start
-        const idx = d;
-        const menstrualDays = info.menstrualDays;
-        const follicularDays = info.follicularDays;
-        const ovDays = info.ovulationDays;
-        let p = "Luteal";
-        if (idx < menstrualDays) p = "Menstrual";
-        else if (idx < menstrualDays + follicularDays) p = "Follicular";
-        else if (idx < menstrualDays + follicularDays + ovDays) p = "Ovulation";
-        days.push({ day: d + 1, phase: p });
-      }
-    }
+    // Build days safely; if start not set, render generic placeholders
+    const clen = Number(lengthLocal) || 28;
+    const days = Array.from({ length: clen }).map((_, idx) => {
+      if (!startLocal) return { day: idx + 1, phase: "—" };
+      const localDate = new Date(new Date(startLocal + "T00:00:00").getTime() + idx * 24 * 60 * 60 * 1000);
+      const info = getCycleInfo(startLocal, clen, localDate);
+      if (!info) return { day: idx + 1, phase: "—" };
+      // compute phase for that day relative to start (re-derive)
+      const menstrualDays = info.menstrualDays;
+      const follicularDays = info.follicularDays;
+      const ovDays = info.ovulationDays;
+      let p = "Luteal";
+      if (idx < menstrualDays) p = "Menstrual";
+      else if (idx < menstrualDays + follicularDays) p = "Follicular";
+      else if (idx < menstrualDays + follicularDays + ovDays) p = "Ovulation";
+      return { day: idx + 1, phase: p };
+    });
 
     return (
       <div className="card">
@@ -332,12 +326,12 @@ export default function App() {
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
           <div>
             <label style={{ display: "block", fontSize: 12 }}>Första dag</label>
-            <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+            <input type="date" value={startLocal} onChange={(e) => setStartLocal(e.target.value)} />
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: 12 }}>Cykellängd</label>
-            <input type="number" min={20} max={40} value={length} onChange={(e) => setLengthLocal(e.target.value)} style={{ width: 80 }} />
+            <input type="number" min={20} max={40} value={lengthLocal} onChange={(e) => setLengthLocal(e.target.value)} style={{ width: 80 }} />
           </div>
 
           <div style={{ alignSelf: "flex-end" }}>
@@ -349,14 +343,9 @@ export default function App() {
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {days.map((d) => (
               <div key={d.day} style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 11,
-                background: d.phase === "Menstrual" ? "#ffd6e0" : d.phase === "Follicular" ? "#ffe4b5" : d.phase === "Ovulation" ? "#ffd700" : "#e9d5ff",
+                background: d.phase === "Menstrual" ? "#ffd6e0" : d.phase === "Follicular" ? "#ffe4b5" : d.phase === "Ovulation" ? "#ffd700" : d.phase === "—" ? "#e5e7eb" : "#e9d5ff",
                 color: "#111827",
               }}>
                 {d.day}
@@ -438,7 +427,6 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {/* Show cycle badge */}
             {cycleInfo ? (
               <div style={{ fontSize: 13, padding: "6px 10px", borderRadius: 10, background: "#fff1f2", color: "#8b2b35" }}>
                 {cycleInfo.phase} • Intensity {Math.round(todayFactor * 100)}%
@@ -539,7 +527,7 @@ export default function App() {
         {/* PROGRAM */}
         {view === "program" && <ProgramRunner programs={PROGRAMS} activeProgramId={activeProgramId} dayIndex={dayIndex} onSelectProgram={handleSelectProgram} onNextDay={handleNextDay} logs={logs} />}
 
-        {/* BOSS RAID */}
+        {/* BOSS */}
         {view === "boss" && (
           <div className="row" style={{ gap: 10 }}>
             <div className="col" style={{ flex: 2, gap: 10 }}>

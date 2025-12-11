@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import BodyMeasurementChart from "./BodyMeasurementChart";
 
 export default function ProfileView({
   profile,
@@ -7,6 +8,8 @@ export default function ProfileView({
   onAddMeasurement,
   onDeleteMeasurement,
 }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   const [form, setForm] = useState({
     name: profile.name,
     nick: profile.nick,
@@ -14,8 +17,6 @@ export default function ProfileView({
     height: profile.height,
     weight: profile.weight,
   });
-
-  const todayStr = new Date().toISOString().slice(0, 10);
 
   const [newMeasurement, setNewMeasurement] = useState({
     key: "waist",
@@ -35,8 +36,7 @@ export default function ProfileView({
   function handleSaveProfile() {
     setProfile({
       ...profile,
-      name: form.name,
-      nick: form.nick,
+      ...form,
       age: Number(form.age),
       height: Number(form.height),
       weight: Number(form.weight),
@@ -53,50 +53,31 @@ export default function ProfileView({
     };
 
     onAddMeasurement(newMeasurement.key, entry);
+
     setNewMeasurement((prev) => ({ ...prev, value: "" }));
   }
 
-  function MeasurementSparkline({ list }) {
+  function getSummary(list) {
     if (!list || list.length < 2) return null;
 
     const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
-    const values = sorted.map((m) => m.value);
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
 
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const span = max - min || 1;
-
-    const width = 150;
-    const height = 40;
-
-    const points = sorted
-      .map((m, i) => {
-        const x =
-          sorted.length === 1 ? width / 2 : (i / (sorted.length - 1)) * width;
-        const y = height - ((m.value - min) / span) * height;
-        return `${x},${y}`;
-      })
-      .join(" ");
-
-    return (
-      <svg width={width} height={height} className="sparkline">
-        <polyline
-          points={points}
-          fill="none"
-          stroke="#ec4899"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
+    return {
+      change: (last.value - first.value).toFixed(1),
+      first,
+      last,
+    };
   }
 
   return (
     <div className="profile-page">
 
-      <h2 className="profile-header">👤 Din profil</h2>
+      {/* HEADER */}
+      <h2 className="profile-header">👤 Din profil & utveckling</h2>
 
-      {/* ------- Profil kort -------- */}
+      {/* --- PROFILKORT --- */}
       <div className="profile-card">
         <h3 className="section-title">🧸 Grundinfo</h3>
 
@@ -150,7 +131,7 @@ export default function ProfileView({
         </button>
       </div>
 
-      {/* ------- Kroppsmått -------- */}
+      {/* --- KROPPSMÅTT --- */}
       <div className="profile-card">
         <h3 className="section-title">📏 Kroppsmått</h3>
 
@@ -161,10 +142,8 @@ export default function ProfileView({
               setNewMeasurement({ ...newMeasurement, key: e.target.value })
             }
           >
-            {Object.entries(measurementLabels).map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
+            {Object.entries(measurementLabels).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
             ))}
           </select>
 
@@ -190,18 +169,33 @@ export default function ProfileView({
           </button>
         </div>
 
-        {/* Lista över mått */}
-        {Object.entries(bodyStats).map(([key, list]) => (
-          <div key={key} className="measure-block">
-            <div className="measure-header-row">
-              <h4 className="measure-title">{measurementLabels[key]}</h4>
-              <MeasurementSparkline list={list} />
-            </div>
+        {/* LOOPA ALLA MÅTT */}
+        {Object.entries(bodyStats).map(([key, list]) => {
+          const summary = getSummary(list);
 
-            {/* Lista */}
-            {list.length === 0 ? (
-              <p className="empty-text">Inga mått registrerade än.</p>
-            ) : (
+          return (
+            <div key={key} className="measure-block">
+              <h4 className="measure-title">
+                {measurementLabels[key]}
+              </h4>
+
+              {summary ? (
+                <p className="measure-meta">
+                  Senaste: <b>{summary.last.value} cm</b>  
+                  ({summary.last.date})  
+                  • Förändring: <b>{summary.change} cm</b>
+                </p>
+              ) : (
+                <p className="measure-meta">Inga värden ännu ✨</p>
+              )}
+
+              {/* Full graf */}
+              <BodyMeasurementChart
+                list={list}
+                label={measurementLabels[key]}
+              />
+
+              {/* Lista */}
               <div className="measure-list">
                 {list
                   .slice()
@@ -209,9 +203,8 @@ export default function ProfileView({
                   .map((m) => (
                     <div key={m.id} className="measure-item">
                       <span>
-                        {m.date}: <strong>{m.value} cm</strong>
+                        {m.date}: <b>{m.value} cm</b>
                       </span>
-
                       <button
                         className="delete-btn"
                         onClick={() => onDeleteMeasurement(key, m.id)}
@@ -221,10 +214,12 @@ export default function ProfileView({
                     </div>
                   ))}
               </div>
-            )}
-          </div>
-        ))}
+
+            </div>
+          );
+        })}
       </div>
+
     </div>
   );
 }

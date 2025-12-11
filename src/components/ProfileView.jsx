@@ -68,6 +68,8 @@ export default function ProfileView({
   }
 
   function Sparkline({ list }) {
+  <BodyStatsChart label={labels[key]} list={list} />
+
     if (!list || list.length < 2) return null;
 
     const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));

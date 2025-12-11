@@ -86,8 +86,10 @@ export const EXERCISES = [
 ];
 // ------ CONTINUED EXERCISES LIST ------
 export const EXERCISES = [
+  ...EXERCISES, //
 
-  // --- fortsättning från del 1 ---
+  // fortsättning på övningarna här
+];
 
   { id: "closegripbench", name: "Close-Grip Bench Press", muscles: ["triceps", "chest"] },
   { id: "jmpress", name: "JM Press", muscles: ["triceps"] },

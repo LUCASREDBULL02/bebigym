@@ -1,6 +1,6 @@
-/* ------------------------------
-   GLOBAL STYLING
------------------------------- */
+/* ---------------------------------------------------
+   GLOBAL – iOS STYLE
+----------------------------------------------------- */
 
 * {
   box-sizing: border-box;
@@ -9,9 +9,9 @@
 
 body {
   margin: 0;
-  font-family: "Inter", system-ui, sans-serif;
-  background: #0f172a;
-  color: white;
+  background: #fafafa;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  color: #1f2937;
   overflow-x: hidden;
 }
 
@@ -20,73 +20,73 @@ body {
   min-height: 100vh;
 }
 
-/* ------------------------------
-   SIDEBAR (Desktop)
------------------------------- */
+/* ---------------------------------------------------
+   SIDEBAR – Desktop Only
+----------------------------------------------------- */
 
 .sidebar {
   width: 240px;
-  background: #111827;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
   padding: 16px;
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-header {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .sidebar-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
 }
 
 .sidebar-sub {
   font-size: 12px;
-  opacity: 0.7;
+  color: #6b7280;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .sidebar-link {
   background: transparent;
-  color: #e2e8f0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  text-align: left;
+  border: none;
+  color: #374151;
+  padding: 10px 12px;
+  border-radius: 10px;
   display: flex;
   gap: 8px;
-  align-items: center;
-  border: none;
+  text-align: left;
   cursor: pointer;
-  transition: 0.15s;
+  transition: background 0.2s;
+  font-size: 14px;
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: #f3f4f6;
 }
 
 .sidebar-link.active {
-  background: linear-gradient(90deg, #f472b6, #ec4899);
-  color: white;
+  background: #ffe4f1;
+  color: #db2777;
 }
 
-/* ------------------------------
+/* ---------------------------------------------------
    MOBILE DRAWER
------------------------------- */
+----------------------------------------------------- */
 
 .hamburger-btn {
   display: none;
   background: none;
   border: none;
   font-size: 26px;
-  color: white;
+  color: #111827;
 }
 
 @media (max-width: 820px) {
@@ -105,12 +105,13 @@ body {
     left: -260px;
     width: 260px;
     height: 100vh;
-    background: #111827;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
     padding: 16px;
     transition: 0.25s ease;
+    z-index: 1000;
     display: flex;
     flex-direction: column;
-    z-index: 1000;
   }
 
   .mobile-drawer.open {
@@ -120,37 +121,38 @@ body {
   .drawer-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     font-size: 18px;
-    margin-bottom: 10px;
+    font-weight: 600;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .drawer-links button {
     background: transparent;
     border: none;
-    color: white;
-    padding: 10px 6px;
-    text-align: left;
+    padding: 12px 4px;
     font-size: 16px;
-    border-radius: 6px;
     width: 100%;
+    text-align: left;
+    color: #374151;
+    border-radius: 8px;
   }
 
   .drawer-links button:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: #f3f4f6;
   }
 
   .close-btn {
-    background: transparent;
+    background: none;
     border: none;
-    color: white;
-    font-size: 28px;
+    font-size: 26px;
+    color: #374151;
   }
 }
 
-/* ------------------------------
+/* ---------------------------------------------------
    MAIN CONTENT
------------------------------- */
+----------------------------------------------------- */
 
 .main {
   flex: 1;
@@ -161,7 +163,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   gap: 12px;
 }
 
@@ -172,16 +174,20 @@ body {
 
 .main-sub {
   font-size: 13px;
-  opacity: 0.8;
-  max-width: 480px;
+  color: #6b7280;
+  max-width: 460px;
 }
 
+/* ---------------------------------------------------
+   CARDS – iOS Soft UI
+----------------------------------------------------- */
+
 .card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 14px;
-  border-radius: 12px;
-  backdrop-filter: blur(6px);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.04);
 }
 
 .card.small {
@@ -203,162 +209,177 @@ body {
   gap: 12px;
 }
 
-/* ------------------------------
-   INPUTS
------------------------------- */
-
-.input {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: white;
-  font-size: 14px;
+@media (max-width: 820px) {
+  .row {
+    flex-direction: column;
+  }
 }
 
-.input:focus {
-  outline: 2px solid #ec4899;
-  border-color: #ec4899;
-}
-
-/* ------------------------------
-   BUTTONS
------------------------------- */
+/* ---------------------------------------------------
+   BUTTONS – Pink iOS Buttons
+----------------------------------------------------- */
 
 .btn,
 .btn-pink,
 .btn-ghost {
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
   cursor: pointer;
   border: none;
   font-size: 14px;
-  transition: 0.15s;
+  transition: 0.2s;
 }
 
 .btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
+  background: #f3f4f6;
+  color: #374151;
 }
 
 .btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: #e5e7eb;
 }
 
 .btn-pink {
-  background: linear-gradient(90deg, #f472b6, #ec4899);
+  background: #f472b6;
   color: white;
   font-weight: 600;
 }
 
 .btn-pink:hover {
-  filter: brightness(1.1);
+  background: #ec4899;
 }
 
 .btn-ghost {
   background: transparent;
-  color: rgba(255, 255, 255, 0.8);
+  color: #9ca3af;
 }
 
 .btn-ghost:hover {
-  color: white;
+  color: #374151;
 }
 
-/* ------------------------------
-   PROGRESS BAR
------------------------------- */
+/* ---------------------------------------------------
+   INPUTS – iOS Flat Inputs
+----------------------------------------------------- */
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 14px;
+  color: #374151;
+}
+
+.input:focus {
+  border-color: #f472b6;
+  outline: 2px solid #fbcfe8;
+}
+
+/* ---------------------------------------------------
+   PROGRESS BAR – iOS Pink
+----------------------------------------------------- */
 
 .progress-wrap {
   width: 100%;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.12);
+  height: 9px;
+  background: #f3f4f6;
   border-radius: 6px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #f9a8d4, #ec4899);
+  background: #f472b6;
   transition: width 0.3s;
 }
 
-/* ------------------------------
-   MODAL
------------------------------- */
+/* ---------------------------------------------------
+   MODAL – iOS Pop
+----------------------------------------------------- */
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0,0,0,0.25);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2000;
-  padding: 10px;
+  z-index: 3000;
+  padding: 16px;
 }
 
 .modal {
+  background: white;
+  padding: 20px;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 380px;
   animation: pop 0.2s ease;
+  border: 1px solid #e5e7eb;
 }
 
 @keyframes pop {
-  from {
-    transform: scale(0.92);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
 
-/* ------------------------------
-   LIFTTOOLS TABS
------------------------------- */
+/* ---------------------------------------------------
+   LIFT TOOLS – Tabs
+----------------------------------------------------- */
 
-.btn.active {
-  background: linear-gradient(90deg, #f472b6, #ec4899);
+.lift-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.lift-tab {
+  flex: 1;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 10px;
+  text-align: center;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.lift-tab.active {
+  background: #f472b6;
+  border-color: #f472b6;
   color: white;
-  font-weight: 600;
 }
 
-/* ------------------------------
-   SPARKLINES
------------------------------- */
+/* ---------------------------------------------------
+   SPARKLINES – Thin iOS graphs
+----------------------------------------------------- */
 
 svg polyline {
-  fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-/* ------------------------------
+/* ---------------------------------------------------
    PROFILE VIEW
------------------------------- */
+----------------------------------------------------- */
 
 .profile-box {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .measurement-list div {
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  padding: 6px 0;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 0;
+  display: flex;
+  justify-content: space-between;
 }
 
 .measurement-delete {
-  color: #f9a8d4;
+  color: #ec4899;
+  font-size: 14px;
   cursor: pointer;
-}
-
-/* ------------------------------
-   MOBILE FIXES
------------------------------- */
-
-@media (max-width: 820px) {
-  .row {
-    flex-direction: column;
-  }
 }

@@ -1,38 +1,119 @@
+// src/components/ProgramRunner.jsx
 import React from "react";
 import { EXERCISES } from "../data/exercises";
 
-export default function ProgramRunner({ programs = [], activeProgramId, dayIndex = 0, onSelectProgram, onNextDay, logs=[] }) {
-  const active = programs.find(p=>p.id===activeProgramId) || programs[0];
-  const day = active?.days?.[dayIndex] || { name:"Day", exercises:[] };
-  const today = new Date().toISOString().slice(0,10);
-  function countLogged(exId){ return logs.filter(l=>l.date===today && l.exerciseId===exId).length; }
+export default function ProgramRunner({
+  programs,
+  activeProgramId,
+  dayIndex,
+  onSelectProgram,
+  onNextDay,
+  logs,
+}) {
+  const active = programs.find((p) => p.id === activeProgramId);
+
+  if (!active)
+    return <div className="card">Inga program hittades.</div>;
+
+  const days = active.days || [];
+  const day = days[dayIndex] || { name: "Dag", exercises: [] };
 
   return (
-    <div className="card">
-      <h3 style={{marginTop:0}}>Program Runner</h3>
-      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-        <select value={active.id} onChange={e=>onSelectProgram(e.target.value)}>
-          {programs.map(p=> <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <div className="small">Dag {dayIndex+1}/{active.days.length}</div>
+    <div className="card" style={{ padding: 20 }}>
+      <h2 style={{ marginTop: 0 }}>📅 {active.name}</h2>
+
+      {/* program selector */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        {programs.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => onSelectProgram(p.id)}
+            className={`btn ${p.id === activeProgramId ? "active" : ""}`}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              background:
+                p.id === activeProgramId
+                  ? "rgba(255,110,161,0.2)"
+                  : "rgba(255,255,255,0.02)",
+            }}
+          >
+            {p.name}
+          </button>
+        ))}
       </div>
 
-      {!day.exercises.length && <div className="small">Ingen dag definierad.</div>}
-      <div style={{display:"grid",gap:8}}>
-        {day.exercises.map((exId,idx)=>{
-          const ex = EXERCISES.find(e=>e.id===exId) || {name:exId};
-          const logged = countLogged(exId);
+      {/* day selector */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {days.map((d, i) => (
+          <button
+            key={i}
+            onClick={() => onNextDay(i)}
+            className={`btn ${i === dayIndex ? "active" : ""}`}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 10,
+              background:
+                i === dayIndex
+                  ? "rgba(255,110,161,0.2)"
+                  : "rgba(255,255,255,0.02)",
+              fontSize: 12,
+            }}
+          >
+            {d.name || `Dag ${i + 1}`}
+          </button>
+        ))}
+      </div>
+
+      <h3 style={{ marginTop: 0 }}>{day.name}</h3>
+      <div className="small" style={{ marginBottom: 10 }}>
+        {day.exercises.length} övningar
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {day.exercises.map((ex, idx) => {
+          const ref = EXERCISES.find((e) => e.id === ex.id);
+          const name = ref?.name || ex.id;
+
+          const history = logs.filter((l) => l.exerciseId === ex.id);
+          const last = history[0];
+
           return (
-            <div key={exId} className="card small" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div>{ex.name}</div>
-              <div className="small">{logged} sets logged</div>
+            <div
+              key={idx}
+              className="card"
+              style={{
+                padding: 12,
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.04)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div style={{ fontWeight: 700 }}>{name}</div>
+                <div className="small" style={{ color: "var(--muted)" }}>
+                  {ex.sets}×{ex.reps}
+                </div>
+              </div>
+
+              {last ? (
+                <div className="small" style={{ marginTop: 4 }}>
+                  Senast: {last.weight} kg × {last.reps} ({last.date})
+                </div>
+              ) : (
+                <div className="small" style={{ marginTop: 4, opacity: 0.5 }}>
+                  Ingen tidigare logg
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
-        <button className="btn" onClick={onNextDay}>Nästa dag ➜</button>
+      <div style={{ marginTop: 16, textAlign: "right" }}>
+        <button className="btn-pink" onClick={() => onNextDay()}>
+          Nästa dag →
+        </button>
       </div>
     </div>
   );

@@ -2,41 +2,38 @@ import React from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
-  LineElement,
-  PointElement,
   CategoryScale,
   LinearScale,
+  PointElement,
+  LineElement,
   Tooltip,
   Legend,
 } from "chart.js";
 
 ChartJS.register(
-  LineElement,
-  PointElement,
   CategoryScale,
   LinearScale,
+  PointElement,
+  LineElement,
   Tooltip,
   Legend
 );
 
-export default function BodyMeasurementChart({ label, dataPoints }) {
-  if (!dataPoints || dataPoints.length === 0) {
-    return <div style={{ fontSize: 12, opacity: 0.7 }}>Inga data än</div>;
-  }
+export default function BodyMeasurementChart({ list, label }) {
+  if (!list || list.length < 2) return null;
 
-  const sorted = [...dataPoints].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
 
-  const chartData = {
-    labels: sorted.map((d) => d.date),
+  const data = {
+    labels: sorted.map((m) => m.date),
     datasets: [
       {
         label,
-        data: sorted.map((d) => d.value),
-        borderColor: "#ec4899",
-        backgroundColor: "rgba(236, 72, 153, 0.3)",
-        borderWidth: 2,
+        data: sorted.map((m) => m.value),
+        borderColor: "#ff4fae",
+        backgroundColor: "rgba(255, 79, 174, 0.3)",
+        borderWidth: 3,
         pointRadius: 4,
-        pointBackgroundColor: "#ec4899",
         tension: 0.3,
       },
     ],
@@ -45,23 +42,21 @@ export default function BodyMeasurementChart({ label, dataPoints }) {
   const options = {
     responsive: true,
     plugins: {
-      legend: { display: false },
+      legend: { labels: { color: "#fff" } },
     },
     scales: {
-      y: {
-        ticks: { color: "#fff" },
-        grid: { color: "rgba(255,255,255,0.05)" },
-      },
       x: {
-        ticks: { color: "#fff" },
-        grid: { display: false },
+        ticks: { color: "#ccc" },
+      },
+      y: {
+        ticks: { color: "#ccc" },
       },
     },
   };
 
   return (
-    <div style={{ marginTop: 10 }}>
-      <Line data={chartData} options={options} />
+    <div className="measurement-chart">
+      <Line data={data} options={options} />
     </div>
   );
 }
